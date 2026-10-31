@@ -19,3 +19,4 @@ class TripPlannerPage(BasePage):
             self.page.wait_for_url(
                 "**/tripplanner/personal-trip/search", timeout=30_000
             )
+        self.save_current_state("trip-planner-search-state.json")

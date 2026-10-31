@@ -1,8 +1,6 @@
-from collections.abc import Mapping
-from typing import Any
-
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
+from data.objects import TripData
 from pages.base.base_page import BasePage
 
 
@@ -24,19 +22,23 @@ class TripSearchPage(BasePage):
         except PlaywrightTimeoutError as error:
             raise RuntimeError(f"Cannot select location: {selection}") from error
 
-    def search_and_plan(self, data: Mapping[str, Any]) -> Page:
+    def search_and_plan(self, data: TripData) -> Page:
         self._select_location(
-            "Where are you from?", data["fromSearch"], data["fromSelect"]
+            "Where are you from?", data.origin_query, data.origin_option
         )
         self._select_location(
-            "Where you want to go?", data["toSearch"], data["toSelect"]
+            "Where you want to go?",
+            data.destination_query,
+            data.destination_option,
         )
         self.page.get_by_role("button", name="showing selected date").click()
-        start_days = data.get("startDaysFromToday", 15)
-        trip_length = data.get("tripLengthDays", 1)
+        start_days = data.start_days_from_today
+        trip_length = data.trip_length_days
         self.select_calendar_date(start_days)
         self.select_calendar_date(start_days + trip_length)
 
         with self.page.expect_popup(timeout=10_000) as popup:
             self.page.get_by_role("button", name="Start Planning").click()
-        return popup.value
+        planner_page = popup.value
+        self.save_current_state("trip-planning-search-state.json")
+        return planner_page

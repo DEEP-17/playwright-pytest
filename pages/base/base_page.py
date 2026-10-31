@@ -2,6 +2,8 @@ from pathlib import Path
 
 from playwright.sync_api import Page
 
+from utils.session_state import save_browser_state
+
 from helpers.calendar_helper import (
     calendar_date_label,
     days_from_today,
@@ -17,11 +19,9 @@ class BasePage:
         print(f"[STAGE] [{type(self).__name__}] {message}")
 
     def save_current_state(self, file_name: str) -> Path:
-        state_path = Path(".auth") / file_name
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-        self.page.context.storage_state(path=str(state_path))
-        self.log_step(f"Browser state saved to {state_path}")
-        return state_path
+        state_files = save_browser_state(self.page.context, file_name)
+        self.log_step(f"Browser state saved to {state_files.storage_state}")
+        return state_files.storage_state
 
     def wait_for_network(self) -> None:
         self.page.wait_for_load_state("networkidle")

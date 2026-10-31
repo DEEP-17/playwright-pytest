@@ -7,6 +7,7 @@ class TripSavedTripsPage(BasePage):
     def clean_up_and_create(self) -> Page:
         self.page.wait_for_url("**/tripplanner/saved-trips", timeout=30_000)
         self.wait_for_dom()
+        self.save_current_state("saved-trips-state.json")
         self.page.on("dialog", lambda dialog: dialog.accept())
 
         delete_button = self.page.get_by_role("button", name="Delete").first
@@ -24,4 +25,5 @@ class TripSavedTripsPage(BasePage):
                 create_trip.click()
         except PlaywrightTimeoutError as error:
             raise RuntimeError("Create Trip did not open a new planner tab.") from error
+        self.save_current_state("trip-planner-created-state.json")
         return popup.value

@@ -35,3 +35,4 @@ class FlightTripSummaryPage(BasePage):
 
         self.wait_for_dom()
         self.log_step("Checkout step opened")
+        self.save_current_state("flight-checkout-state.json")

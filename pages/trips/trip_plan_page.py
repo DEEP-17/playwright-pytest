@@ -8,3 +8,4 @@ class TripPlanPage(BasePage):
         save_icon = self.page.get_by_test_id("SaveIcon")
         save_icon.wait_for(state="visible")
         save_icon.click()
+        self.save_current_state("trip-saved-state.json")

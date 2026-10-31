@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
 
@@ -12,8 +12,8 @@ load_dotenv(PROJECT_ROOT / ".env")
 @dataclass(frozen=True)
 class Settings:
     base_url: str | None
-    user_email: str | None
-    user_password: str | None
+    user_email: str | None = field(repr=False)
+    user_password: str | None = field(repr=False)
 
     @classmethod
     def from_environment(

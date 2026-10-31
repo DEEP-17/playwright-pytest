@@ -1,8 +1,7 @@
-from typing import Any
-
 import pytest
 from playwright.sync_api import Page
 
+from data.objects import TestData
 from pages.common.home_page import HomePage
 from pages.flights.flight_listing_page import FlightListingPage
 from pages.flights.flight_search_page import FlightSearchPage
@@ -23,12 +22,12 @@ def test_flight_booking_flow(
     flight_trip_summary_page: FlightTripSummaryPage,
     flight_seat_map_page: FlightSeatMapPage,
     flight_traveller_info_page: FlightTravellerInfoPage,
-    test_data: dict[str, Any],
+    test_data: TestData,
     settings: Settings,
 ) -> None:
     assert authenticated_page is home_page.page
     home_page.navigate_to_flights()
-    flight_data = test_data["flight"]
+    flight_data = test_data.flight
     flight_search_page.search_flight(flight_data)
     flight_search_page.save_current_state("flight-searched-state.json")
     flight_listing_page.filter_and_select()

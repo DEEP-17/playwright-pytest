@@ -1,0 +1,144 @@
+name: pytest
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      run_saved_trip_flow:
+        description: Run the saved-trip test (removes an existing saved trip)
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-playwright
+      - name: Run unit tests
+        run: >-
+          .\.venv\Scripts\python.exe -m pytest -q
+          tests/test_calendar_helper.py
+          tests/test_support.py
+
+  auth-config:
+    name: Check authenticated-test configuration
+    runs-on: windows-latest
+    outputs:
+      base_url_configured: ${{ steps.credentials.outputs.base_url_configured }}
+      configured: ${{ steps.credentials.outputs.configured }}
+    steps:
+      - name: Check whether authenticated tests can run
+        id: credentials
+        env:
+          TEST_BASE_URL: ${{ secrets.BASE_URL }}
+          TEST_USER_EMAIL: ${{ secrets.USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+        shell: pwsh
+        run: |
+          $configured = (
+            -not [string]::IsNullOrWhiteSpace($env:TEST_BASE_URL) -and
+            -not [string]::IsNullOrWhiteSpace($env:TEST_USER_EMAIL) -and
+            -not [string]::IsNullOrWhiteSpace($env:TEST_USER_PASSWORD)
+          )
+          $baseUrlConfigured = -not [string]::IsNullOrWhiteSpace($env:TEST_BASE_URL)
+          "base_url_configured=$($baseUrlConfigured.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          "configured=$($configured.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+
+  session-state-tests:
+    name: Browser session-state tests
+    runs-on: windows-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-playwright
+      - name: Run browser session-state tests
+        run: .\.venv\Scripts\python.exe -m pytest -q tests/test_session_state.py
+
+  public-ui-tests:
+    name: Public UI tests
+    runs-on: windows-latest
+    needs: [unit-tests, auth-config]
+    if: ${{ needs.auth-config.outputs.base_url_configured == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-playwright
+      - name: Run public UI tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+        run: >-
+          .\.venv\Scripts\python.exe -m pytest -q
+          tests/test_critical_flows.py::test_c10_unknown_attractions_location_is_rejected_without_navigation
+
+  flight-ui-tests:
+    name: Flight UI tests
+    runs-on: windows-latest
+    needs: [unit-tests, auth-config]
+    if: ${{ needs.auth-config.outputs.configured == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-playwright
+      - name: Run flight UI tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USER_EMAIL: ${{ secrets.USER_EMAIL }}
+          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+        run: .\.venv\Scripts\python.exe -m pytest -q tests/test_flight.py
+
+  hotel-ui-tests:
+    name: Hotel UI tests
+    runs-on: windows-latest
+    needs: [unit-tests, auth-config]
+    if: ${{ needs.auth-config.outputs.configured == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-playwright
+      - name: Run hotel UI tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USER_EMAIL: ${{ secrets.USER_EMAIL }}
+          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+        run: .\.venv\Scripts\python.exe -m pytest -q tests/test_hotel.py
+
+  critical-flow-tests:
+    name: Authenticated critical-flow tests
+    runs-on: windows-latest
+    needs: [unit-tests, auth-config]
+    if: ${{ needs.auth-config.outputs.configured == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-playwright
+      - name: Run authenticated critical-flow tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USER_EMAIL: ${{ secrets.USER_EMAIL }}
+          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+        run: >-
+          .\.venv\Scripts\python.exe -m pytest -q
+          tests/test_critical_flows.py
+          -k "not c10"
+
+  saved-trip-tests:
+    name: Destructive saved-trip test
+    runs-on: windows-latest
+    needs: [unit-tests, auth-config]
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' &&
+        inputs.run_saved_trip_flow &&
+        needs.auth-config.outputs.configured == 'true'
+      }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-playwright
+      - name: Run saved-trip test
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USER_EMAIL: ${{ secrets.USER_EMAIL }}
+          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+        run: .\.venv\Scripts\python.exe -m pytest -q tests/test_trip.py

@@ -27,6 +27,12 @@
       "firstName": "John",
       "lastName": "Smith",
       "age": "35"
+    },
+    "contact": {
+      "address": "123 Main St, Anytown, USA",
+      "zip": "382531",
+      "city": "Anytown",
+      "phone": "9512345678"
     }
   },
   "trip": {

@@ -1,0 +1,24 @@
+name: Set up Python and Playwright
+description: Create the project virtual environment and install Chromium dependencies
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: pip
+        cache-dependency-path: requirements.txt
+
+    - name: Create virtual environment
+      shell: pwsh
+      run: python -m venv .venv
+
+    - name: Install dependencies
+      shell: pwsh
+      run: |
+        .\.venv\Scripts\python.exe -m pip install --upgrade pip
+        .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+    - name: Install Chromium
+      shell: pwsh
+      run: .\.venv\Scripts\python.exe -m playwright install chromium

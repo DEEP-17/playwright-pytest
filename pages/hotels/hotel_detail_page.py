@@ -1,13 +1,23 @@
 import re
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from pages.base.base_page import BasePage
 
 
 class HotelDetailPage(BasePage):
     def has_book_now_button(self) -> bool:
-        self.wait_for_network()
         button = self.page.locator("button").filter(has_text="Book Now").first
-        return button.is_visible()
+        try:
+            button.wait_for(state="visible", timeout=15_000)
+        except PlaywrightTimeoutError:
+            return False
+        return True
+
+    def is_sold_out(self) -> bool:
+        return self.page.get_by_text(
+            re.compile(r"We are sold out!|Sorry we are sold out!", re.IGNORECASE)
+        ).is_visible()
 
     def search_other_hotels_if_sold_out(self) -> None:
         search_other = self.page.get_by_role(
@@ -21,13 +31,9 @@ class HotelDetailPage(BasePage):
         self.wait_for_network()
 
     def click_book_now(self) -> bool:
-        self.wait_for_network()
         book_now = self.page.locator("button").filter(has_text="Book Now").first
         if not book_now.is_visible():
-            sold_out_message = self.page.get_by_text(
-                re.compile(r"We are sold out!|Sorry we are sold out!", re.IGNORECASE)
-            )
-            if sold_out_message.is_visible():
+            if self.is_sold_out():
                 self.log_step("Hotel detail page is sold out; booking is unavailable.")
             else:
                 self.log_step("Book Now button was not found on hotel detail page.")
@@ -40,5 +46,7 @@ class HotelDetailPage(BasePage):
         if price_error.is_visible():
             self.log_step("Price error encountered - test reached booking page")
             self.page.get_by_role("button", name="×").click()
+            self.save_current_state("hotel-booking-error-state.json")
             return False
+        self.save_current_state("hotel-guest-details-state.json")
         return True

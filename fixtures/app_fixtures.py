@@ -1,7 +1,5 @@
-from typing import Any
-
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Browser, Page, expect
 
 from pages.common.home_page import HomePage
 from pages.common.login_page import LoginPage
@@ -19,6 +17,12 @@ from pages.trips.trip_planner_page import TripPlannerPage
 from pages.trips.trip_saved_trips_page import TripSavedTripsPage
 from pages.trips.trip_search_page import TripSearchPage
 from utils.config import Settings
+from data.objects import TestData
+from utils.session_state import (
+    BrowserStateFiles,
+    restore_session_storage,
+    state_files,
+)
 from utils.test_data import load_test_data
 
 
@@ -27,32 +31,54 @@ def settings() -> Settings:
     return Settings.from_environment()
 
 
-@pytest.fixture(scope="session")
-def base_url(settings: Settings) -> str:
-    return (settings.base_url or "http://localhost").rstrip("/")
-
-
-@pytest.fixture(scope="session")
+@pytest.fixture
 def browser_context_args(
-    browser_context_args: dict[str, object], base_url: str
+    browser_context_args: dict[str, object],
+    settings: Settings,
+    request: pytest.FixtureRequest,
 ) -> dict[str, object]:
-    return {**browser_context_args, "base_url": base_url}
+    base_url = (settings.base_url or "http://localhost").rstrip("/")
+    context_args = {**browser_context_args, "base_url": base_url}
+    if "authenticated_page" in request.fixturenames:
+        authenticated_state = request.getfixturevalue("authenticated_state")
+        context_args["storage_state"] = str(authenticated_state.storage_state)
+    return context_args
 
 
 @pytest.fixture(scope="session")
-def test_data() -> dict[str, Any]:
+def test_data() -> TestData:
     return load_test_data()
 
 
-@pytest.fixture
-def authenticated_page(page: Page, settings: Settings) -> Page:
+@pytest.fixture(scope="session")
+def authenticated_state(
+    browser: Browser, settings: Settings
+) -> BrowserStateFiles:
     if not settings.base_url:
         raise pytest.UsageError("Set BASE_URL in your environment or .env file.")
     if not settings.user_email or not settings.user_password:
         raise pytest.UsageError(
             "Set USER_EMAIL and USER_PASSWORD in your environment or .env file."
         )
-    LoginPage(page).login(settings.user_email, settings.user_password)
+
+    context = browser.new_context(base_url=settings.base_url)
+    try:
+        page = context.new_page()
+        LoginPage(page).login(settings.user_email, settings.user_password)
+    finally:
+        context.close()
+    return state_files("authenticated-state.json")
+
+
+@pytest.fixture
+def authenticated_page(
+    page: Page, authenticated_state: BrowserStateFiles
+) -> Page:
+    restore_session_storage(page.context, authenticated_state.session_storage)
+    page.goto("/")
+    expect(
+        page.get_by_role("link", name="Tripplanner saved trips")
+    ).to_be_visible(timeout=30_000)
     return page
 
 

@@ -6,31 +6,17 @@ from pages.base.base_page import BasePage
 class HomePage(BasePage):
     def navigate_to_flights(self) -> None:
         self.log_step("Navigating to flight search")
-        self.page.goto("/")
-        self.page.get_by_role("button", name="Toggle menu").click()
-        self.page.get_by_role("link", name="Travel").click()
-        (
-            self.page.locator(".flex-grow.overflow-y-auto.custom-scrollbar")
-            .locator('a[href="/flights/search"]')
-            .first.click()
-        )
+        self.page.goto("/flights/search", wait_until="domcontentloaded")
         self.log_step("Flight search page opened")
 
     def navigate_to_hotels(self) -> None:
         self.log_step("Navigating to hotel search")
-        self.page.goto("/")
-        self.page.get_by_role("button", name="Toggle menu").click()
-        self.page.get_by_role("link", name="Travel").click()
-        (
-            self.page.locator(".flex-grow.overflow-y-auto.custom-scrollbar")
-            .locator('a[href="/hotel/search"]')
-            .first.click()
-        )
+        self.page.goto("/hotel/search", wait_until="domcontentloaded")
         self.log_step("Hotel search page opened")
 
     def open_saved_trips(self) -> Page:
         self.log_step("Opening saved trips")
-        self.page.goto("/")
+        self.page.goto("/", wait_until="domcontentloaded")
         saved_trips_link = self.page.get_by_role(
             "link", name="Tripplanner saved trips"
         )

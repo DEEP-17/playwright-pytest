@@ -1,8 +1,7 @@
-from typing import Any
-
 import pytest
 from playwright.sync_api import Page
 
+from data.objects import TestData
 from pages.common.home_page import HomePage
 from pages.hotels.hotel_detail_page import HotelDetailPage
 from pages.hotels.hotel_guest_info_page import HotelGuestInfoPage
@@ -19,12 +18,12 @@ def test_hotel_booking_flow(
     home_page: HomePage,
     hotel_search_page: HotelSearchPage,
     hotel_listing_page: HotelListingPage,
-    test_data: dict[str, Any],
+    test_data: TestData,
     settings: Settings,
 ) -> None:
     assert authenticated_page is home_page.page
     home_page.navigate_to_hotels()
-    hotel_data = test_data["hotel"]
+    hotel_data = test_data.hotel
     hotel_search_page.search(hotel_data)
     hotel_search_page.save_current_state("hotel-searched-state.json")
 
