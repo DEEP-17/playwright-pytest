@@ -4,7 +4,6 @@ from playwright.sync_api import Browser
 from hooks.browser_diagnostics import (
     BROWSER_DIAGNOSTICS,
     _safe_message,
-    _safe_url,
     attach_browser_diagnostics,
 )
 
@@ -22,14 +21,10 @@ def test_diagnostics_redact_credentials_and_query_strings(
 
     assert "qa@example.test" not in message
     assert "test-password" not in message
-    assert "user:pass" not in message
     assert "token=private" not in message
-    assert _safe_url("https://example.test/path?token=private") == (
-        "https://example.test/path"
-    )
 
 
-def test_browser_console_events_are_recorded(
+def test_ui_click_fill_and_selection_are_logged(
     browser: Browser, request: pytest.FixtureRequest
 ) -> None:
     page = browser.new_page()
@@ -40,22 +35,36 @@ def test_browser_console_events_are_recorded(
             lambda route: route.fulfill(
                 status=200,
                 content_type="text/html",
-                body="<html><body>diagnostics</body></html>",
+                body=(
+                    '<label for="origin">Departing from?</label>'
+                    '<input id="origin" type="text">'
+                    '<label for="cabin">Cabin</label>'
+                    '<select id="cabin">'
+                    '<option value="economy">Economy</option>'
+                    '<option value="business">Business class</option>'
+                    '</select>'
+                    '<button type="button">Search</button>'
+                ),
             ),
         )
-        page.goto("https://diagnostics.example.test/status?token=private")
-        page.evaluate("console.info('captured diagnostic event')")
+        page.goto("https://diagnostics.example.test/")
+        page.get_by_role("textbox", name="Departing from?").fill("Toronto")
+        page.get_by_role("combobox", name="Cabin").select_option("business")
+        page.get_by_role("button", name="Search").click()
     finally:
         page.close()
 
     diagnostics = request.node.stash[BROWSER_DIAGNOSTICS]
-    assert any("captured diagnostic event" in event for event in diagnostics)
     assert any(
-        "[request] GET https://diagnostics.example.test/status" in event
+        "[ui] Filled textbox 'Departing from?'" in event
         for event in diagnostics
     )
     assert any(
-        "[response] 200 GET https://diagnostics.example.test/status" in event
+        "[ui] Selected dropdown 'Cabin: Business class'" in event
         for event in diagnostics
     )
-    assert all("token=private" not in event for event in diagnostics)
+    assert any(
+        "[ui] Clicked button 'Search'" in event
+        for event in diagnostics
+    )
+    assert all("[request]" not in event and "[response]" not in event for event in diagnostics)

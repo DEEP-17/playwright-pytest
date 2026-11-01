@@ -51,9 +51,11 @@ run the authenticated suites.
 
 Every pytest command streams verbose test output and DEBUG-level logs to the
 Actions console and saves DEBUG-level Python logs as `test-results/pytest.log`.
-Browser diagnostics include console messages, page errors, requests, failed
-requests, and HTTP error responses; query strings and known credential values
-are redacted from diagnostic messages. The final report job combines the four
+Browser interaction logs show clicks, filled field labels, and selected
+options, for example `[ui] Clicked button 'Search'`; raw network request logs
+are disabled. Console warnings/errors and uncaught page errors remain visible.
+Diagnostic text redacts query strings and known credential values. The final
+report job combines the four
 workbook JUnit reports into a 23-row `23-test-summary.html` and publishes the
 same case-by-case results in the GitHub Actions job summary. It fails
 validation if a result is missing, duplicated, skipped, or not passed.
