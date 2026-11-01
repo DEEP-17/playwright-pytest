@@ -8,6 +8,13 @@ class TripPlannerPage(BasePage):
         self.wait_for_dom()
         self.page.wait_for_timeout(2_000)
         popup_image = self.page.locator('img[src*="Group 369"]:visible').first
+        if not popup_image.count():
+            self.page.wait_for_url(
+                "**/tripplanner/personal-trip/search", timeout=30_000
+            )
+            self.save_current_state("trip-planner-search-state.json")
+            return
+
         popup_image.wait_for(state="visible", timeout=15_000)
         popup_image.click(force=True)
         try:

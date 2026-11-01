@@ -65,17 +65,17 @@ jobs:
           - case: Flight scenarios
             case_id: flight-scenarios
             test_paths: tests/test_flight.py tests/test_critical_flows.py
-            test_filter: "test_flight_booking_flow or c5 or c6 or (c7 and flight) or c13 or c15 or c21 or c22"
+            test_filter: "test_e1 or test_e5 or test_e6 or test_e7 or test_e8 or test_e9 or c5 or c6 or (c7 and flight) or c13 or c15 or c21 or c22"
             authenticated: true
           - case: Hotel scenarios
             case_id: hotel-scenarios
             test_paths: tests/test_hotel.py tests/test_critical_flows.py
-            test_filter: "test_hotel_booking_flow or (c7 and hotel) or c8 or c9"
+            test_filter: "test_e2 or test_e10 or (c7 and hotel) or c8 or c9"
             authenticated: true
           - case: Public attractions validation
             case_id: public-attractions
             test_paths: tests/test_critical_flows.py
-            test_filter: c10
+            test_filter: "test_e4 or c10"
             authenticated: false
     steps:
       - uses: actions/checkout@v4
@@ -145,7 +145,7 @@ jobs:
           retention-days: 14
 
   saved-trip-tests:
-    name: Destructive saved-trip test
+    name: Saved-trip scenarios E12-E14
     runs-on: windows-latest
     environment: QA
     needs: ui-test-cases
@@ -176,7 +176,7 @@ jobs:
           if ($missing.Count -gt 0) {
             throw "Configure these GitHub Actions repository secrets: $($missing -join ', '). Secret values are never printed."
           }
-      - name: Run saved-trip test
+      - name: Run saved-trip scenarios
         id: run-tests
         env:
           BASE_URL: ${{ secrets.BASE_URL }}

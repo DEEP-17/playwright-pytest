@@ -16,9 +16,11 @@ hotel, and trip-planner flows to synchronous Playwright with pytest.
 
 The end-to-end tests authenticate before each flow. Authentication state files,
 environment files, traces, and test reports are excluded from version control.
-Locator-based critical flows are implemented in `tests/test_critical_flows.py`
-and can be selected with `pytest -m critical`. Network-throttling scenarios are
-excluded from this UI-only set.
+The workbook's 23 non-network test executions are mapped to pytest cases
+`E1-E14` (only IDs present in the workbook) and `C5-C22`; C7 runs once for
+flights and once for hotels. The C14 slow-network scenario is deliberately
+excluded from CI and was not run. Locator-based critical flows are implemented
+in `tests/test_critical_flows.py` and can be selected with `pytest -m critical`.
 
 ## Browser session state and test data
 
@@ -34,13 +36,14 @@ per-test overrides. Page objects consume these objects instead of unvalidated
 dictionary keys.
 
 GitHub Actions runs unit and browser session-state checks in parallel, then
-fans out into three isolated test lanes: all flight scenarios, hotel, and
-public UI. The lanes run in parallel, while every flight listing and checkout
+fans out into three isolated UI lanes: all flight scenarios, hotel, and
+attractions. The lanes run in parallel, while every flight listing and checkout
 scenario runs sequentially in one lane to avoid concurrent search, repricing,
-and seat requests against the same QA itinerary. A failure in one case does
-not stop later cases in its lane or other lanes. The saved-trip test runs after
-the lanes because it deletes and creates account-level saved-trip data. The
-final report job collects evidence from every lane. Every suite runs on pushes,
+and seat requests against the same QA itinerary. C15 also checks browser
+back/forward recovery for both flight and hotel results. A failure in one case
+does not stop later cases in its lane or other lanes. The E12-E14 saved-trip
+scenarios run afterward because E14 deletes and creates account-level saved-trip
+data. The final report job collects evidence from every lane. Every suite runs on pushes,
 pull requests, manual dispatch, and the daily 02:00 UTC schedule; missing
 `BASE_URL`, `USER_EMAIL`, or `USER_PASSWORD` is reported as a test error
 rather than silently skipping the job. Configure those repository secrets to

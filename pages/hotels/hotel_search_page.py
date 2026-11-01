@@ -1,13 +1,23 @@
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from data.objects import HotelData
 from pages.base.base_page import BasePage
 
 
 class HotelSearchPage(BasePage):
-    def search(self, data: HotelData) -> None:
+    def search(
+        self,
+        data: HotelData,
+        *,
+        rooms: int = 1,
+        additional_adults: int = 1,
+        children: int = 1,
+    ) -> None:
+        if rooms < 1 or additional_adults < 0 or children < 0:
+            raise ValueError("Hotel searches require at least one room.")
+
         expect(self.page).to_have_url(re.compile(r".*hotel/search"))
         self.page.get_by_role(
             "textbox", name="What hotel you looking for?"
@@ -24,8 +34,22 @@ class HotelSearchPage(BasePage):
         self.select_calendar_date(check_in + stay_length)
         self.page.keyboard.press("Escape")
 
-        self.page.get_by_role("button", name="Room, 1 Guest").click()
-        self.page.get_by_role("button", name="Increase adults").click()
-        self.page.get_by_role("button", name="Increase children").click()
+        guest_control = self.page.get_by_role(
+            "button", name=re.compile(r"\d+ Room")
+        )
+        guest_control.click()
+        for _ in range(rooms - 1):
+            self.page.get_by_role("button", name="Increase rooms").click()
+        for _ in range(additional_adults):
+            self.page.get_by_role("button", name="Increase adults").first.click()
+        for _ in range(children):
+            self.page.get_by_role("button", name="Increase children").first.click()
+        expected_guests = rooms + additional_adults + children
+        expected_summary = re.compile(
+            rf"{rooms} Rooms?, {expected_guests} Guests?"
+        )
+        expect(guest_control).to_contain_text(expected_summary)
+        guest_control.click()
+
         self.page.get_by_role("button", name="Search").click()
         self.save_current_state("hotel-search-submitted-state.json")

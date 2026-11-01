@@ -9,9 +9,17 @@ class FlightListingPage(BasePage):
     def wait_for_results(self, timeout: int = 60_000) -> bool:
         first_result = self.page.locator("div.flex > section.flex > div.flex").first
         try:
-            first_result.wait_for(state="visible", timeout=timeout)
+            first_result.wait_for(state="visible", timeout=min(timeout, 10_000))
         except PlaywrightTimeoutError:
-            return False
+            results_count = self.page.get_by_text(
+                re.compile(r"\d+\s+results found", re.IGNORECASE)
+            ).first
+            try:
+                results_count.wait_for(state="visible", timeout=timeout)
+            except PlaywrightTimeoutError:
+                return False
+            result_count = re.search(r"\d+", results_count.inner_text())
+            return result_count is not None and int(result_count.group()) > 0
         return True
 
     def filter_and_select(self) -> None:

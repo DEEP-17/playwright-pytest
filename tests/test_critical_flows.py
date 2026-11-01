@@ -234,6 +234,32 @@ def test_c10_unknown_attractions_location_is_rejected_without_navigation(
     expect(page).to_have_url(re.compile(r"/$"))
 
 
+@pytest.mark.regression
+def test_e4_search_attractions_and_open_details(page: Page) -> None:
+    page.goto("/tours/search")
+    expect(
+        page.get_by_role("heading", name="Search attractions")
+    ).to_be_visible()
+    expect(
+        page.get_by_role("textbox", name="Where are you going?")
+    ).to_be_visible()
+
+    destination_card = page.get_by_role("link", name="city").first
+    expect(destination_card).to_be_visible()
+    destination_card.click()
+    expect(page).to_have_url(re.compile(r"/tours/[^/?]+/\d+"))
+    tour_heading = page.get_by_role("heading", level=2).first
+    expect(tour_heading).to_be_visible()
+
+    with page.expect_popup() as detail_page_info:
+        tour_heading.click()
+    detail_page = detail_page_info.value
+    expect(detail_page).to_have_url(re.compile(r"/tours/[^/?]+/packages/.+"))
+    expect(detail_page.get_by_role("heading", level=1)).to_be_visible(
+        timeout=60_000
+    )
+
+
 @pytest.mark.critical
 @pytest.mark.regression
 def test_c13_extreme_flight_price_filter_reduces_results_and_reset_restores_them(
@@ -258,11 +284,13 @@ def test_c13_extreme_flight_price_filter_reduces_results_and_reset_restores_them
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c15_back_and_forward_restore_selected_flight_summary(
+def test_c15_back_and_forward_restore_flight_and_hotel_navigation(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
     flight_listing_page: FlightListingPage,
+    hotel_search_page: HotelSearchPage,
+    hotel_listing_page: HotelListingPage,
     test_data: TestData,
 ) -> None:
     home_page.navigate_to_flights()
@@ -279,6 +307,29 @@ def test_c15_back_and_forward_restore_selected_flight_summary(
     authenticated_page.go_forward()
     expect(authenticated_page).to_have_url(selected_url)
     expect(authenticated_page.get_by_role("heading", name="Trip Summary")).to_be_visible()
+
+    home_page.navigate_to_hotels()
+    hotel_search_page.search(test_data.hotel)
+    expect(authenticated_page).to_have_url(re.compile(r"/hotel/listing-stay/"))
+    hotel_results_url = authenticated_page.url
+    hotel_detail_page = hotel_listing_page.open_hotel_detail()
+
+    if hotel_detail_page is authenticated_page:
+        authenticated_page.go_back()
+        expect(authenticated_page).to_have_url(hotel_results_url)
+        expect(
+            authenticated_page.locator("button").filter(has_text="Select").first
+        ).to_be_visible(timeout=60_000)
+        authenticated_page.go_forward()
+        expect(authenticated_page).to_have_url(re.compile(r"/hotel/"))
+    else:
+        authenticated_page.go_back()
+        expect(authenticated_page).to_have_url(re.compile(r"/hotel/search"))
+        authenticated_page.go_forward()
+        expect(authenticated_page).to_have_url(hotel_results_url)
+        expect(
+            authenticated_page.locator("button").filter(has_text="Select").first
+        ).to_be_visible(timeout=60_000)
 
 
 @pytest.mark.critical
