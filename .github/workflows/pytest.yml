@@ -59,18 +59,13 @@ jobs:
     if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 3
       matrix:
         include:
-          - case: Flight checkout scenarios
-            case_id: flight-checkout-scenarios
+          - case: Flight scenarios
+            case_id: flight-scenarios
             test_paths: tests/test_flight.py tests/test_critical_flows.py
-            test_filter: "test_flight_booking_flow or c5 or c6 or (c7 and flight) or c22"
-            authenticated: true
-          - case: Flight listing scenarios
-            case_id: flight-listing-scenarios
-            test_paths: tests/test_critical_flows.py
-            test_filter: "c13 or c15 or c21"
+            test_filter: "test_flight_booking_flow or c5 or c6 or (c7 and flight) or c13 or c15 or c21 or c22"
             authenticated: true
           - case: Hotel scenarios
             case_id: hotel-scenarios

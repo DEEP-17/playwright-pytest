@@ -5,7 +5,8 @@ from pages.base.base_page import BasePage
 
 class FlightTravellerInfoPage(BasePage):
     def fill_info(self, data: FlightData, email: str) -> None:
-        self.page.get_by_text("Passenger Detail #4INFANT(").wait_for(state="visible")
+        first_passenger = self.page.locator('input[name="firstName1"]')
+        first_passenger.wait_for(state="visible")
 
         passenger_count = self.page.locator('input[name^="firstName"]').count()
         for index in range(1, passenger_count + 1):

@@ -32,16 +32,7 @@ class FlightSearchPage(BasePage):
         self.page.locator("#date").click()
         self.select_calendar_date(data.departure_days_from_today)
 
-        self.log_step("Selecting cabin class and passengers")
-        self.page.get_by_role("button", name="Economy").click()
-        self.page.get_by_role("menuitem", name="Business class").click()
-        self.page.get_by_role("button", name="Passenger").click()
-        for passenger_type in ("adults", "children", "infants"):
-            passenger_row = self.page.get_by_text(
-                passenger_type, exact=True
-            ).locator("xpath=../..")
-            passenger_row.get_by_role("button").nth(1).click()
-
+        self.log_step("Using the default economy cabin and single adult")
         self.log_step("Submitting flight search")
         self.page.get_by_role("button", name="Search").click()
         self.save_current_state("flight-search-submitted-state.json")
