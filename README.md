@@ -33,14 +33,22 @@ state at login, search, selection, and checkout milestones.
 per-test overrides. Page objects consume these objects instead of unvalidated
 dictionary keys.
 
-GitHub Actions runs the unit tests first, then fans out to separate session
-state, public UI, flight UI, hotel UI, and authenticated critical-flow jobs.
-Each UI job creates its own `.venv`; authenticated jobs are skipped unless the
-repository secrets `BASE_URL`, `USER_EMAIL`, and `USER_PASSWORD` are set. The
-public UI job requires `BASE_URL` but does not require login credentials.
-The workflow runs on pushes, pull requests, manual dispatch, and daily at 02:00
-UTC. The saved-trip flow is opt-in because it removes an existing saved trip;
-run it manually with the `run_saved_trip_flow` workflow input.
+GitHub Actions runs the unit tests first, validates browser session-state
+handling, then fans out to flight, hotel, authenticated critical-flow, and
+saved-trip jobs. Every suite runs on pushes, pull requests, manual dispatch,
+and the daily 02:00 UTC schedule; missing `BASE_URL`, `USER_EMAIL`, or
+`USER_PASSWORD` is reported as a test error rather than silently skipping the
+job. Configure those repository secrets to run the authenticated suites.
+
+Each authenticated job creates its own `.auth` state locally on its runner and
+verifies both storage-state files were written. These files contain credentials
+and are deliberately not uploaded or shared between jobs; CI artifacts include
+only the pytest report, browser failure media, and a non-sensitive state
+creation evidence manifest. The saved-trip flow deletes an existing saved trip
+before creating one, so its automatic CI run uses the configured test account.
+Pytest writes a self-contained HTML report to `test-results/report.html`;
+failed browser tests also retain screenshots, videos, and traces. CI uploads
+per-job artifacts and a combined bundle named `complete-pytest-reports`.
 
 ## Page-object layout
 
@@ -50,6 +58,6 @@ run it manually with the `run_saved_trip_flow` workflow input.
 - `helpers`: reusable calendar interactions and date formatting
 - `utils`: environment settings and shared test-data loading
 - `fixtures`: page-object and authentication fixtures
-- `hooks`: failure screenshots saved under `test-results/screenshots`
+- `hooks`: additional failure screenshots saved under `test-results/screenshots`
 - `conftest.py`: registers the project fixtures and pytest hooks
 - `data/test_data.json`: input data used by the corresponding end-to-end flows

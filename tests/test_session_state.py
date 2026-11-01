@@ -1,8 +1,28 @@
+import json
 from pathlib import Path
 
+import pytest
 from playwright.sync_api import Browser
 
-from utils.session_state import restore_session_storage, save_browser_state
+from utils.session_state import (
+    restore_session_storage,
+    save_browser_state,
+    state_files,
+)
+
+
+def test_default_session_state_directory_is_created(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr("utils.session_state.PROJECT_ROOT", tmp_path)
+
+    files = state_files("authenticated-state.json")
+
+    assert files.storage_state.parent == tmp_path / ".auth"
+    assert files.storage_state.parent.is_dir()
+    assert files.session_storage == (
+        tmp_path / ".auth" / "authenticated-state.session-storage.json"
+    )
 
 
 def test_browser_state_round_trip_restores_cookies_and_all_web_storage(
@@ -51,7 +71,11 @@ def test_browser_state_round_trip_restores_cookies_and_all_web_storage(
         first_context, "round-trip-state.json", tmp_path
     )
     first_context.close()
-
+    assert state_files.storage_state.is_file()
+    assert state_files.session_storage.is_file()
+    assert json.loads(state_files.session_storage.read_text(encoding="utf-8")) == {
+        "https://state.example.test": {"session-key": "session-value"}
+    }
     second_context = browser.new_context(
         storage_state=str(state_files.storage_state)
     )

@@ -177,7 +177,10 @@ def test_c8_hotel_sold_out_or_price_error_has_a_recovery_state(
         except PlaywrightTimeoutError:
             loading_state = detail_page.get_by_text("Please wait...", exact=True)
             if loading_state.is_visible():
-                pytest.skip("Hotel price check is still loading; fallback state unavailable.")
+                pytest.fail(
+                    "Hotel price check remained in a loading state; "
+                    "the fallback could not be verified."
+                )
 
             recovery_message = detail_page.get_by_text(
                 re.compile(r"sold out|search other hotels", re.IGNORECASE)
@@ -243,9 +246,11 @@ def test_c13_extreme_flight_price_filter_reduces_results_and_reset_restores_them
     home_page.navigate_to_flights()
     flight_search_page.search_flight(test_data.flight)
     if not flight_listing_page.wait_for_results():
-        pytest.skip("Flight results did not load; price-filter precondition unavailable.")
+        pytest.fail(
+            "Flight results did not load; the price-filter behavior could not be verified."
+        )
     if not authenticated_page.get_by_role("slider").count():
-        pytest.skip("The available flight results have no accessible price slider.")
+        pytest.fail("Flight results do not expose an accessible price slider.")
     initial_count = _flight_result_count(authenticated_page)
     _set_price_filter_to_extreme(authenticated_page)
     _expect_filtered_flights_and_reset(authenticated_page, initial_count)
@@ -288,14 +293,16 @@ def test_c21_combined_flight_filters_narrow_results_and_reset_restores_them(
     home_page.navigate_to_flights()
     flight_search_page.search_flight(test_data.flight)
     if not flight_listing_page.wait_for_results():
-        pytest.skip("Flight results did not load; filter precondition unavailable.")
+        pytest.fail(
+            "Flight results did not load; combined filters could not be verified."
+        )
     initial_count = _flight_result_count(authenticated_page)
     stop_filter = authenticated_page.get_by_text(re.compile(r"^2 Stops?$")).first
     airline_filter = authenticated_page.locator('[id="Air Canada"]').first
     if not stop_filter.count() or not stop_filter.is_visible():
-        pytest.skip("Two-stop filter is not present for the available results.")
+        pytest.fail("The available flight results do not show the two-stop filter.")
     if not airline_filter.count() or not airline_filter.is_visible():
-        pytest.skip("Air Canada filter is not present for the available results.")
+        pytest.fail("The available flight results do not show the Air Canada filter.")
     stop_filter.click(force=True)
     airline_filter.click()
     _set_price_filter_to_extreme(authenticated_page)
@@ -359,8 +366,9 @@ def _open_hotel_detail(
             re.compile(r"please wait|loading", re.IGNORECASE)
         )
         if loading_state.is_visible():
-            pytest.skip(
-                "Hotel inventory is still loading; detail-page precondition unavailable."
+            pytest.fail(
+                "Hotel inventory remained in a loading state; "
+                "the detail-page flow could not be verified."
             )
         raise RuntimeError(
             "Hotel search did not display a selectable result or loading state."
@@ -376,7 +384,10 @@ def _open_hotel_guest_form(
 ) -> Page:
     hotel_page = _open_hotel_detail(home_page, search_page, listing_page, hotel_data)
     if not HotelDetailPage(hotel_page).click_book_now():
-        pytest.skip("The selected hotel is sold out or unavailable for booking.")
+        pytest.fail(
+            "The selected hotel is unavailable for booking; "
+            "the guest-form validation could not be verified."
+        )
     email_field = hotel_page.locator('input[name="email"]')
     try:
         email_field.wait_for(state="visible", timeout=15_000)
@@ -385,8 +396,9 @@ def _open_hotel_guest_form(
             re.compile(r"please wait|loading", re.IGNORECASE)
         )
         if loading_state.is_visible():
-            pytest.skip(
-                "Hotel booking form is still loading; validation precondition unavailable."
+            pytest.fail(
+                "Hotel booking form remained in a loading state; "
+                "form validation could not be verified."
             )
         raise RuntimeError(
             "Book Now was accepted, but the hotel contact form did not open."

@@ -37,7 +37,9 @@ def browser_context_args(
     settings: Settings,
     request: pytest.FixtureRequest,
 ) -> dict[str, object]:
-    base_url = (settings.base_url or "http://localhost").rstrip("/")
+    if not settings.base_url:
+        raise pytest.UsageError("Set BASE_URL in your environment or .env file.")
+    base_url = settings.base_url.rstrip("/")
     context_args = {**browser_context_args, "base_url": base_url}
     if "authenticated_page" in request.fixturenames:
         authenticated_state = request.getfixturevalue("authenticated_state")

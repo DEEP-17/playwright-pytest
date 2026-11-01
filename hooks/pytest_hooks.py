@@ -1,10 +1,23 @@
+import os
 import re
 import warnings
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
+
+
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    config = item.config
+    (Path(config.rootpath) / ".auth").mkdir(parents=True, exist_ok=True)
+    html_path = getattr(config.option, "htmlpath", None)
+    if html_path:
+        report_path = Path(os.path.expandvars(html_path)).expanduser()
+        if not report_path.is_absolute():
+            report_path = Path(config.invocation_params.dir) / report_path
+        report_path.parent.mkdir(parents=True, exist_ok=True)
 
 
 @pytest.hookimpl(hookwrapper=True)
