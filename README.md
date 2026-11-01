@@ -36,17 +36,17 @@ per-test overrides. Page objects consume these objects instead of unvalidated
 dictionary keys.
 
 GitHub Actions runs unit and browser session-state checks together in one
-preflight job, then branches into three separate, named Flight, Hotel, and
-Attractions jobs (not a matrix). Each category job depends on preflight and has
-its own selector, report, logs, and artifact. The category jobs run in parallel.
-Every flight
+preflight job, followed by separate Flight, Hotel, and Attractions jobs (not a
+matrix). The category jobs run sequentially after preflight so each appears as
+its own stage in the Actions graph; each retains its own selector, report,
+logs, and artifact. Every flight
 listing and checkout scenario runs sequentially in its lane to avoid concurrent
 search, repricing, and seat requests against the same QA itinerary. C15 also
 checks browser back/forward recovery for both flight and hotel results. A
 failure in one case does not stop later cases in its lane or other lanes. The
 E12-E14 saved-trip scenarios run afterward because E14 deletes and creates
 account-level saved-trip data. The final report job collects evidence from
-every lane. Every suite runs on pushes,
+every category. Every suite runs on pushes,
 pull requests, manual dispatch, and the daily 02:00 UTC schedule; missing
 `BASE_URL`, `USER_EMAIL`, or `USER_PASSWORD` is reported as a test error
 rather than silently skipping the job. Configure those repository secrets to
