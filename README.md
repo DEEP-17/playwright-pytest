@@ -34,17 +34,19 @@ per-test overrides. Page objects consume these objects instead of unvalidated
 dictionary keys.
 
 GitHub Actions runs unit and browser session-state checks in parallel, then
-fans out into a bounded matrix with one isolated runner per flight, hotel, and
-critical-flow test case. Matrix cases run up to five at once and continue
-independently when another case fails. The saved-trip test runs after the
-matrix because it deletes and creates account-level saved-trip data. The final
-report job collects evidence from every case. Every suite runs on pushes, pull
-requests, manual dispatch, and the daily 02:00 UTC schedule; missing
+fans out into four isolated test lanes: flight checkout, flight listing,
+hotel, and public UI. The lanes run in parallel while related flight checkout
+cases run sequentially within their lane, avoiding concurrent repricing of the
+same QA itinerary. A failure in one case does not stop later cases in its lane
+or other lanes. The saved-trip test runs after the lanes because it deletes and
+creates account-level saved-trip data. The final report job collects evidence
+from every lane. Every suite runs on pushes, pull requests, manual dispatch,
+and the daily 02:00 UTC schedule; missing
 `BASE_URL`, `USER_EMAIL`, or `USER_PASSWORD` is reported as a test error
 rather than silently skipping the job. Configure those repository secrets to
 run the authenticated suites.
 
-Each authenticated test case creates its own `.auth` state locally on its
+Each authenticated lane creates its own `.auth` state locally on its
 runner and verifies both storage-state files were written. These files contain
 credentials and are deliberately not uploaded or shared between jobs; CI
 artifacts include only the pytest report, browser failure media, and a
