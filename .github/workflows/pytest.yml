@@ -40,7 +40,6 @@ jobs:
   flight-tests:
     name: Flight test cases
     runs-on: windows-latest
-    environment: QA
     needs: preflight-tests
     if: ${{ !cancelled() }}
     steps:
@@ -59,7 +58,6 @@ jobs:
   hotel-tests:
     name: Hotel test cases
     runs-on: windows-latest
-    environment: QA
     needs: preflight-tests
     if: ${{ !cancelled() }}
     steps:
@@ -78,7 +76,6 @@ jobs:
   attractions-tests:
     name: Attractions test cases
     runs-on: windows-latest
-    environment: QA
     needs: preflight-tests
     if: ${{ !cancelled() }}
     steps:
