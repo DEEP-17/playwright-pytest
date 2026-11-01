@@ -16,6 +16,7 @@ from pages.trips.trip_plan_page import TripPlanPage
 from pages.trips.trip_planner_page import TripPlannerPage
 from pages.trips.trip_saved_trips_page import TripSavedTripsPage
 from pages.trips.trip_search_page import TripSearchPage
+from hooks.browser_diagnostics import attach_browser_diagnostics
 from utils.config import Settings
 from data.objects import TestData
 from utils.session_state import (
@@ -24,6 +25,13 @@ from utils.session_state import (
     state_files,
 )
 from utils.test_data import load_test_data
+
+
+@pytest.fixture(autouse=True)
+def browser_diagnostics(request: pytest.FixtureRequest) -> None:
+    if "page" in request.fixturenames:
+        page = request.getfixturevalue("page")
+        attach_browser_diagnostics(page, request.node)
 
 
 @pytest.fixture(scope="session")
@@ -54,7 +62,7 @@ def test_data() -> TestData:
 
 @pytest.fixture(scope="session")
 def authenticated_state(
-    browser: Browser, settings: Settings
+    browser: Browser, settings: Settings, request: pytest.FixtureRequest
 ) -> BrowserStateFiles:
     if not settings.base_url:
         raise pytest.UsageError("Set BASE_URL in your environment or .env file.")
@@ -66,6 +74,7 @@ def authenticated_state(
     context = browser.new_context(base_url=settings.base_url)
     try:
         page = context.new_page()
+        attach_browser_diagnostics(page, request.node)
         LoginPage(page).login(settings.user_email, settings.user_password)
     finally:
         context.close()

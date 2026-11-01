@@ -36,29 +36,40 @@ per-test overrides. Page objects consume these objects instead of unvalidated
 dictionary keys.
 
 GitHub Actions runs unit and browser session-state checks in parallel, then
-fans out into three isolated UI lanes: all flight scenarios, hotel, and
-attractions. The lanes run in parallel, while every flight listing and checkout
-scenario runs sequentially in one lane to avoid concurrent search, repricing,
-and seat requests against the same QA itinerary. C15 also checks browser
-back/forward recovery for both flight and hotel results. A failure in one case
-does not stop later cases in its lane or other lanes. The E12-E14 saved-trip
-scenarios run afterward because E14 deletes and creates account-level saved-trip
-data. The final report job collects evidence from every lane. Every suite runs on pushes,
+fans out into isolated flight, hotel, and attractions lanes. Every flight
+listing and checkout scenario runs sequentially in its lane to avoid concurrent
+search, repricing, and seat requests against the same QA itinerary. C15 also
+checks browser back/forward recovery for both flight and hotel results. A
+failure in one case does not stop later cases in its lane or other lanes. The
+E12-E14 saved-trip scenarios run afterward because E14 deletes and creates
+account-level saved-trip data. The final report job collects evidence from
+every lane. Every suite runs on pushes,
 pull requests, manual dispatch, and the daily 02:00 UTC schedule; missing
 `BASE_URL`, `USER_EMAIL`, or `USER_PASSWORD` is reported as a test error
 rather than silently skipping the job. Configure those repository secrets to
 run the authenticated suites.
 
+Every pytest command streams verbose test output and DEBUG-level logs to the
+Actions console and saves DEBUG-level Python logs as `test-results/pytest.log`.
+Browser diagnostics include console messages, page errors, requests, failed
+requests, and HTTP error responses; query strings and known credential values
+are redacted from diagnostic messages. The final report job combines the four
+workbook JUnit reports into a 23-row `23-test-summary.html` and publishes the
+same case-by-case results in the GitHub Actions job summary. It fails
+validation if a result is missing, duplicated, skipped, or not passed.
+The HTML/Markdown summary is also uploaded as `pytest-23-case-summary`.
+
 Each authenticated lane creates its own `.auth` state locally on its
 runner and verifies both storage-state files were written. These files contain
-credentials and are deliberately not uploaded or shared between jobs; CI
-artifacts include only the pytest report, browser failure media, and a
-non-sensitive state-creation evidence manifest. The saved-trip flow deletes an
-existing saved trip before creating one, so its automatic CI run uses the
-configured test account.
+credentials and are deliberately not uploaded or shared between jobs. CI
+artifacts contain pytest and JUnit reports, debug logs, browser failure media,
+and a non-sensitive state-creation evidence manifest. The saved-trip flow
+deletes an existing saved trip before creating one, so its automatic CI run
+uses the configured test account. CI uploads per-job reports and a combined
+bundle named `complete-pytest-reports`; the bundle includes the summary, logs,
+session-state evidence, and failure screenshots, videos, and traces.
 Pytest writes a self-contained HTML report to `test-results/report.html`;
-failed browser tests also retain screenshots, videos, and traces. CI uploads
-per-job artifacts and a combined bundle named `complete-pytest-reports`.
+failed browser tests also retain screenshots, videos, and traces.
 
 ## Page-object layout
 

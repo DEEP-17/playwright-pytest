@@ -19,9 +19,13 @@ jobs:
         run: New-Item -ItemType Directory -Force "test-results" | Out-Null
       - name: Run unit tests
         run: >-
-          .\.venv\Scripts\python.exe -m pytest -q
+          .\.venv\Scripts\python.exe -m pytest -vv -s
+          --log-cli-level=DEBUG
+          --log-file=test-results/pytest.log
+          --log-file-level=DEBUG
           tests/test_calendar_helper.py
           tests/test_support.py
+          tests/test_ci_report.py
       - name: Upload pytest report and browser artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -41,7 +45,13 @@ jobs:
         shell: pwsh
         run: New-Item -ItemType Directory -Force "test-results" | Out-Null
       - name: Run browser session-state tests
-        run: .\.venv\Scripts\python.exe -m pytest -q tests/test_session_state.py
+        run: >-
+          .\.venv\Scripts\python.exe -m pytest -vv -s
+          --log-cli-level=DEBUG
+          --log-file=test-results/pytest.log
+          --log-file-level=DEBUG
+          tests/test_session_state.py
+          tests/test_browser_diagnostics.py
       - name: Upload pytest report and browser artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -113,7 +123,11 @@ jobs:
           USER_EMAIL: ${{ secrets.USER_EMAIL }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
         run: >-
-          .\.venv\Scripts\python.exe -m pytest -q
+          .\.venv\Scripts\python.exe -m pytest -vv -s
+          --log-cli-level=DEBUG
+          --log-file=test-results/pytest.log
+          --log-file-level=DEBUG
+          --junitxml=test-results/junit-${{ matrix.case_id }}.xml
           ${{ matrix.test_paths }}
           -k "${{ matrix.test_filter }}"
       - name: Verify authenticated session-state files
@@ -182,7 +196,13 @@ jobs:
           BASE_URL: ${{ secrets.BASE_URL }}
           USER_EMAIL: ${{ secrets.USER_EMAIL }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
-        run: .\.venv\Scripts\python.exe -m pytest -q tests/test_trip.py
+        run: >-
+          .\.venv\Scripts\python.exe -m pytest -vv -s
+          --log-cli-level=DEBUG
+          --log-file=test-results/pytest.log
+          --log-file-level=DEBUG
+          --junitxml=test-results/junit-saved-trip.xml
+          tests/test_trip.py
       - name: Verify authenticated session-state files
         if: always()
         shell: pwsh
@@ -221,12 +241,47 @@ jobs:
       - ui-test-cases
       - saved-trip-tests
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Download pytest reports and browser artifacts
+        if: always()
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           pattern: pytest-report-*
           path: test-reports
+      - name: Build and validate the 23-case report
+        if: always()
+        run: >-
+          python scripts\ci_report.py
+          --reports-dir test-reports
+          --html test-reports\23-test-summary.html
+          --markdown test-reports\23-test-summary.md
+          --expected-count 23
+      - name: Publish workbook results to the workflow summary
+        if: always()
+        shell: pwsh
+        run: |
+          $summaryPath = "test-reports\23-test-summary.md"
+          if (Test-Path $summaryPath) {
+            Get-Content $summaryPath | Add-Content $env:GITHUB_STEP_SUMMARY
+          } else {
+            "The 23-case summary could not be generated. See the combined CI artifact and job logs." | Add-Content $env:GITHUB_STEP_SUMMARY
+          }
+      - name: Upload final 23-case HTML summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-23-case-summary
+          path: |
+            test-reports/23-test-summary.html
+            test-reports/23-test-summary.md
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload combined CI reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: complete-pytest-reports

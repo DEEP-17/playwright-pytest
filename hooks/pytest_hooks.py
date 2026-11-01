@@ -8,6 +8,7 @@ import pytest
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
 
+from hooks.browser_diagnostics import BROWSER_DIAGNOSTICS
 
 def _prepare_output_directories(config: pytest.Config) -> None:
     (Path(config.rootpath) / ".auth").mkdir(parents=True, exist_ok=True)
@@ -33,6 +34,12 @@ def pytest_runtest_makereport(
 ) -> Generator[None, None, None]:
     outcome = yield
     report = outcome.get_result()
+    if report.when == "call":
+        diagnostics = item.stash.get(BROWSER_DIAGNOSTICS, [])
+        if diagnostics:
+            item.add_report_section(
+                "call", "browser diagnostics", "\n".join(diagnostics)
+            )
     if report.when != "call" or not report.failed:
         return
 
