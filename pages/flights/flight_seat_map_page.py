@@ -83,7 +83,14 @@ class FlightSeatMapPage(BasePage):
             self.page.get_by_role(
                 "button", name="Skip/Move to Checkout..."
             ).click(force=True)
-            first_name.wait_for(state="visible", timeout=30_000)
+            try:
+                self.page.wait_for_url("**/flights/travellerinfo/**", timeout=60_000)
+                first_name.wait_for(state="visible", timeout=60_000)
+            except PlaywrightTimeoutError as error:
+                raise RuntimeError(
+                    "Flight checkout did not finish loading passenger details "
+                    f"at {self.page.url}."
+                ) from error
         if no_seats_available:
             self.log_step("Continuing to checkout without selecting a seat")
         self.save_current_state("flight-traveller-details-state.json")
