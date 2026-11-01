@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-playwright
+      - name: Ensure report directory exists
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force "test-results" | Out-Null
       - name: Run unit tests
         run: >-
           .\.venv\Scripts\python.exe -m pytest -q
@@ -31,11 +34,12 @@ jobs:
   session-state-tests:
     name: Browser session-state tests
     runs-on: windows-latest
-    needs: unit-tests
-    if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-playwright
+      - name: Ensure report directory exists
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force "test-results" | Out-Null
       - name: Run browser session-state tests
         run: .\.venv\Scripts\python.exe -m pytest -q tests/test_session_state.py
       - name: Upload pytest report and browser artifacts
@@ -47,104 +51,105 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  flight-ui-tests:
-    name: Flight UI tests
+  ui-test-cases:
+    name: ${{ matrix.case }}
     runs-on: windows-latest
     needs: [unit-tests, session-state-tests]
     if: ${{ !cancelled() }}
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        include:
+          - case: Flight booking flow
+            case_id: flight-booking
+            test_path: tests/test_flight.py
+            test_filter: test_flight_booking_flow
+            authenticated: true
+          - case: Hotel booking flow
+            case_id: hotel-booking
+            test_path: tests/test_hotel.py
+            test_filter: test_hotel_booking_flow
+            authenticated: true
+          - case: Public attractions validation
+            case_id: public-attractions
+            test_path: tests/test_critical_flows.py
+            test_filter: c10
+            authenticated: false
+          - case: Flight contact validation
+            case_id: flight-contact-validation
+            test_path: tests/test_critical_flows.py
+            test_filter: "c7 and flight"
+            authenticated: true
+          - case: Flight no-seat checkout
+            case_id: flight-no-seat-checkout
+            test_path: tests/test_critical_flows.py
+            test_filter: c5
+            authenticated: true
+          - case: Flight passenger validation
+            case_id: flight-passenger-validation
+            test_path: tests/test_critical_flows.py
+            test_filter: c6
+            authenticated: true
+          - case: Flight price filter
+            case_id: flight-price-filter
+            test_path: tests/test_critical_flows.py
+            test_filter: c13
+            authenticated: true
+          - case: Flight history navigation
+            case_id: flight-history-navigation
+            test_path: tests/test_critical_flows.py
+            test_filter: c15
+            authenticated: true
+          - case: Flight combined filters
+            case_id: flight-combined-filters
+            test_path: tests/test_critical_flows.py
+            test_filter: c21
+            authenticated: true
+          - case: Flight checkout refresh
+            case_id: flight-checkout-refresh
+            test_path: tests/test_critical_flows.py
+            test_filter: c22
+            authenticated: true
+          - case: Hotel contact validation
+            case_id: hotel-contact-validation
+            test_path: tests/test_critical_flows.py
+            test_filter: "c7 and hotel"
+            authenticated: true
+          - case: Hotel recovery state
+            case_id: hotel-recovery-state
+            test_path: tests/test_critical_flows.py
+            test_filter: c8
+            authenticated: true
+          - case: Hotel guest age validation
+            case_id: hotel-guest-age-validation
+            test_path: tests/test_critical_flows.py
+            test_filter: c9
+            authenticated: true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-playwright
-      - name: Run flight UI tests
-        env:
-          BASE_URL: ${{ secrets.BASE_URL }}
-          USER_EMAIL: ${{ secrets.USER_EMAIL }}
-          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
-        run: .\.venv\Scripts\python.exe -m pytest -q tests/test_flight.py
-      - name: Verify authenticated session-state files
-        if: always()
+      - name: Ensure report directory exists
         shell: pwsh
-        run: |
-          $storageState = Test-Path ".auth\authenticated-state.json"
-          $sessionStorage = Test-Path ".auth\authenticated-state.session-storage.json"
-          [ordered]@{
-            job = "flight-ui-tests"
-            storageStateCreated = $storageState
-            sessionStorageCreated = $sessionStorage
-          } | ConvertTo-Json | Set-Content "test-results\session-state-evidence.json"
-          if (-not $storageState -or -not $sessionStorage) {
-            throw "Authenticated storage-state files were not created."
-          }
-      - name: Upload pytest report and browser artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-report-flight-ui
-          path: test-results/
-          if-no-files-found: warn
-          retention-days: 14
-
-  hotel-ui-tests:
-    name: Hotel UI tests
-    runs-on: windows-latest
-    needs: [unit-tests, session-state-tests]
-    if: ${{ !cancelled() }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-playwright
-      - name: Run hotel UI tests
-        env:
-          BASE_URL: ${{ secrets.BASE_URL }}
-          USER_EMAIL: ${{ secrets.USER_EMAIL }}
-          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
-        run: .\.venv\Scripts\python.exe -m pytest -q tests/test_hotel.py
-      - name: Verify authenticated session-state files
-        if: always()
-        shell: pwsh
-        run: |
-          $storageState = Test-Path ".auth\authenticated-state.json"
-          $sessionStorage = Test-Path ".auth\authenticated-state.session-storage.json"
-          [ordered]@{
-            job = "hotel-ui-tests"
-            storageStateCreated = $storageState
-            sessionStorageCreated = $sessionStorage
-          } | ConvertTo-Json | Set-Content "test-results\session-state-evidence.json"
-          if (-not $storageState -or -not $sessionStorage) {
-            throw "Authenticated storage-state files were not created."
-          }
-      - name: Upload pytest report and browser artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-report-hotel-ui
-          path: test-results/
-          if-no-files-found: warn
-          retention-days: 14
-
-  critical-flow-tests:
-    name: Authenticated critical-flow tests
-    runs-on: windows-latest
-    needs: [unit-tests, session-state-tests]
-    if: ${{ !cancelled() }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-playwright
-      - name: Run authenticated critical-flow tests
+        run: New-Item -ItemType Directory -Force "test-results" | Out-Null
+      - name: Run selected test case
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           USER_EMAIL: ${{ secrets.USER_EMAIL }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
         run: >-
           .\.venv\Scripts\python.exe -m pytest -q
-          tests/test_critical_flows.py
+          "${{ matrix.test_path }}"
+          -k "${{ matrix.test_filter }}"
       - name: Verify authenticated session-state files
-        if: always()
+        if: ${{ always() && matrix.authenticated }}
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force "test-results" | Out-Null
           $storageState = Test-Path ".auth\authenticated-state.json"
           $sessionStorage = Test-Path ".auth\authenticated-state.session-storage.json"
           [ordered]@{
-            job = "critical-flow-tests"
+            case = "${{ matrix.case }}"
             storageStateCreated = $storageState
             sessionStorageCreated = $sessionStorage
           } | ConvertTo-Json | Set-Content "test-results\session-state-evidence.json"
@@ -155,7 +160,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-report-critical-flows
+          name: pytest-report-${{ matrix.case_id }}
           path: test-results/
           if-no-files-found: warn
           retention-days: 14
@@ -163,11 +168,14 @@ jobs:
   saved-trip-tests:
     name: Destructive saved-trip test
     runs-on: windows-latest
-    needs: [unit-tests, session-state-tests]
+    needs: ui-test-cases
     if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-playwright
+      - name: Ensure report directory exists
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force "test-results" | Out-Null
       - name: Run saved-trip test
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
@@ -178,6 +186,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force "test-results" | Out-Null
           $storageState = Test-Path ".auth\authenticated-state.json"
           $sessionStorage = Test-Path ".auth\authenticated-state.session-storage.json"
           [ordered]@{
@@ -204,9 +213,7 @@ jobs:
     needs:
       - unit-tests
       - session-state-tests
-      - flight-ui-tests
-      - hotel-ui-tests
-      - critical-flow-tests
+      - ui-test-cases
       - saved-trip-tests
     steps:
       - name: Download pytest reports and browser artifacts

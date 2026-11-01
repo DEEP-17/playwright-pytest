@@ -22,3 +22,9 @@ runs:
     - name: Install Chromium
       shell: pwsh
       run: .\.venv\Scripts\python.exe -m playwright install chromium
+
+    - name: Prepare test artifact directories
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force ".auth" | Out-Null
+        New-Item -ItemType Directory -Force "test-results" | Out-Null

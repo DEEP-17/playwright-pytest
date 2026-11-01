@@ -33,19 +33,24 @@ state at login, search, selection, and checkout milestones.
 per-test overrides. Page objects consume these objects instead of unvalidated
 dictionary keys.
 
-GitHub Actions runs the unit tests first, validates browser session-state
-handling, then fans out to flight, hotel, authenticated critical-flow, and
-saved-trip jobs. Every suite runs on pushes, pull requests, manual dispatch,
-and the daily 02:00 UTC schedule; missing `BASE_URL`, `USER_EMAIL`, or
-`USER_PASSWORD` is reported as a test error rather than silently skipping the
-job. Configure those repository secrets to run the authenticated suites.
+GitHub Actions runs unit and browser session-state checks in parallel, then
+fans out into a bounded matrix with one isolated runner per flight, hotel, and
+critical-flow test case. Matrix cases run up to five at once and continue
+independently when another case fails. The saved-trip test runs after the
+matrix because it deletes and creates account-level saved-trip data. The final
+report job collects evidence from every case. Every suite runs on pushes, pull
+requests, manual dispatch, and the daily 02:00 UTC schedule; missing
+`BASE_URL`, `USER_EMAIL`, or `USER_PASSWORD` is reported as a test error
+rather than silently skipping the job. Configure those repository secrets to
+run the authenticated suites.
 
-Each authenticated job creates its own `.auth` state locally on its runner and
-verifies both storage-state files were written. These files contain credentials
-and are deliberately not uploaded or shared between jobs; CI artifacts include
-only the pytest report, browser failure media, and a non-sensitive state
-creation evidence manifest. The saved-trip flow deletes an existing saved trip
-before creating one, so its automatic CI run uses the configured test account.
+Each authenticated test case creates its own `.auth` state locally on its
+runner and verifies both storage-state files were written. These files contain
+credentials and are deliberately not uploaded or shared between jobs; CI
+artifacts include only the pytest report, browser failure media, and a
+non-sensitive state-creation evidence manifest. The saved-trip flow deletes an
+existing saved trip before creating one, so its automatic CI run uses the
+configured test account.
 Pytest writes a self-contained HTML report to `test-results/report.html`;
 failed browser tests also retain screenshots, videos, and traces. CI uploads
 per-job artifacts and a combined bundle named `complete-pytest-reports`.

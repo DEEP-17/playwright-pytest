@@ -9,8 +9,7 @@ from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
 
 
-def pytest_runtest_setup(item: pytest.Item) -> None:
-    config = item.config
+def _prepare_output_directories(config: pytest.Config) -> None:
     (Path(config.rootpath) / ".auth").mkdir(parents=True, exist_ok=True)
     html_path = getattr(config.option, "htmlpath", None)
     if html_path:
@@ -18,6 +17,14 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
         if not report_path.is_absolute():
             report_path = Path(config.invocation_params.dir) / report_path
         report_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def pytest_sessionstart(session: pytest.Session) -> None:
+    _prepare_output_directories(session.config)
+
+
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    _prepare_output_directories(item.config)
 
 
 @pytest.hookimpl(hookwrapper=True)
