@@ -36,7 +36,9 @@ per-test overrides. Page objects consume these objects instead of unvalidated
 dictionary keys.
 
 GitHub Actions runs unit and browser session-state checks in parallel, then
-fans out into isolated flight, hotel, and attractions lanes. Every flight
+fans out into three separate, named Flight, Hotel, and Attractions jobs (not a
+matrix). Each category has its own selector, report, logs, and artifact.
+Every flight
 listing and checkout scenario runs sequentially in its lane to avoid concurrent
 search, repricing, and seat requests against the same QA itinerary. C15 also
 checks browser back/forward recovery for both flight and hotel results. A

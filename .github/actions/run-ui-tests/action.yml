@@ -1,0 +1,99 @@
+name: Run UI test category
+description: Run and upload one isolated UI test category
+inputs:
+  case-name:
+    description: Display name for the UI category
+    required: true
+  case-id:
+    description: Stable category ID used in report artifacts
+    required: true
+  test-paths:
+    description: Pytest files that contain this category
+    required: true
+  test-filter:
+    description: Pytest -k expression for this category
+    required: true
+  authenticated:
+    description: Whether this category requires login secrets and session-state evidence
+    required: true
+  base-url:
+    description: Base URL for the QA application
+    required: true
+  user-email:
+    description: QA user email
+    required: false
+  user-password:
+    description: QA user password
+    required: false
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup-playwright
+    - name: Ensure report directory exists
+      shell: pwsh
+      run: New-Item -ItemType Directory -Force "test-results" | Out-Null
+    - name: Validate required test configuration
+      shell: pwsh
+      env:
+        BASE_URL: ${{ inputs.base-url }}
+        USER_EMAIL: ${{ inputs.user-email }}
+        USER_PASSWORD: ${{ inputs.user-password }}
+        AUTHENTICATED: ${{ inputs.authenticated }}
+      run: |
+        $missing = @()
+        if ([string]::IsNullOrWhiteSpace($env:BASE_URL)) {
+          $missing += "BASE_URL"
+        }
+        if ($env:AUTHENTICATED -eq "true") {
+          if ([string]::IsNullOrWhiteSpace($env:USER_EMAIL)) {
+            $missing += "USER_EMAIL"
+          }
+          if ([string]::IsNullOrWhiteSpace($env:USER_PASSWORD)) {
+            $missing += "USER_PASSWORD"
+          }
+        }
+        if ($missing.Count -gt 0) {
+          throw "Configure these GitHub Actions repository secrets: $($missing -join ', '). Secret values are never printed."
+        }
+    - name: Run ${{ inputs.case-name }}
+      id: run-tests
+      shell: pwsh
+      env:
+        BASE_URL: ${{ inputs.base-url }}
+        USER_EMAIL: ${{ inputs.user-email }}
+        USER_PASSWORD: ${{ inputs.user-password }}
+      run: |
+        .\.venv\Scripts\python.exe -m pytest -vv -s `
+          --log-cli-level=DEBUG `
+          --log-file=test-results/pytest.log `
+          --log-file-level=DEBUG `
+          --junitxml="test-results/junit-${{ inputs.case-id }}.xml" `
+          ${{ inputs.test-paths }} `
+          -k "${{ inputs.test-filter }}"
+    - name: Verify authenticated session-state files
+      if: ${{ always() && inputs.authenticated == 'true' }}
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force "test-results" | Out-Null
+        $storageState = Test-Path ".auth\authenticated-state.json"
+        $sessionStorage = Test-Path ".auth\authenticated-state.session-storage.json"
+        [ordered]@{
+          case = "${{ inputs.case-name }}"
+          pytestOutcome = "${{ steps.run-tests.outcome }}"
+          storageStateCreated = $storageState
+          sessionStorageCreated = $sessionStorage
+        } | ConvertTo-Json | Set-Content "test-results\session-state-evidence.json"
+        if (
+          "${{ steps.run-tests.outcome }}" -eq "success" -and
+          (-not $storageState -or -not $sessionStorage)
+        ) {
+          throw "Authenticated storage-state files were not created."
+        }
+    - name: Upload pytest report and browser artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: pytest-report-${{ inputs.case-id }}
+        path: test-results/
+        if-no-files-found: warn
+        retention-days: 14
