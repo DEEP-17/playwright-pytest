@@ -58,7 +58,7 @@ jobs:
   hotel-tests:
     name: Hotel test cases
     runs-on: windows-latest
-    needs: flight-tests
+    needs: preflight-tests
     if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
   attractions-tests:
     name: Attractions test cases
     runs-on: windows-latest
-    needs: hotel-tests
+    needs: preflight-tests
     if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
