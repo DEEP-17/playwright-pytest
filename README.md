@@ -35,9 +35,10 @@ state at login, search, selection, and checkout milestones.
 per-test overrides. Page objects consume these objects instead of unvalidated
 dictionary keys.
 
-GitHub Actions runs unit and browser session-state checks in parallel, then
-fans out into three separate, named Flight, Hotel, and Attractions jobs (not a
-matrix). Each category has its own selector, report, logs, and artifact.
+GitHub Actions runs unit and browser session-state checks together in one
+preflight job, then branches into three separate, named Flight, Hotel, and
+Attractions jobs (not a matrix). Each category job depends on preflight and has
+its own selector, report, logs, and artifact. The category jobs run in parallel.
 Every flight
 listing and checkout scenario runs sequentially in its lane to avoid concurrent
 search, repricing, and seat requests against the same QA itinerary. C15 also

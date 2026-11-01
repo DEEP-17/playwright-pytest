@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-tests:
-    name: Unit tests
+  preflight-tests:
+    name: Unit and browser session tests
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +17,7 @@ jobs:
       - name: Ensure report directory exists
         shell: pwsh
         run: New-Item -ItemType Directory -Force "test-results" | Out-Null
-      - name: Run unit tests
+      - name: Run unit and browser session tests
         run: >-
           .\.venv\Scripts\python.exe -m pytest -vv -s
           --log-cli-level=DEBUG
@@ -26,37 +26,13 @@ jobs:
           tests/test_calendar_helper.py
           tests/test_support.py
           tests/test_ci_report.py
-      - name: Upload pytest report and browser artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-report-unit-tests
-          path: test-results/
-          if-no-files-found: warn
-          retention-days: 14
-
-  session-state-tests:
-    name: Browser session-state tests
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-playwright
-      - name: Ensure report directory exists
-        shell: pwsh
-        run: New-Item -ItemType Directory -Force "test-results" | Out-Null
-      - name: Run browser session-state tests
-        run: >-
-          .\.venv\Scripts\python.exe -m pytest -vv -s
-          --log-cli-level=DEBUG
-          --log-file=test-results/pytest.log
-          --log-file-level=DEBUG
           tests/test_session_state.py
           tests/test_browser_diagnostics.py
       - name: Upload pytest report and browser artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-report-session-state
+          name: pytest-report-preflight
           path: test-results/
           if-no-files-found: warn
           retention-days: 14
@@ -65,7 +41,7 @@ jobs:
     name: Flight test cases
     runs-on: windows-latest
     environment: QA
-    needs: [unit-tests, session-state-tests]
+    needs: preflight-tests
     if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +60,7 @@ jobs:
     name: Hotel test cases
     runs-on: windows-latest
     environment: QA
-    needs: [unit-tests, session-state-tests]
+    needs: preflight-tests
     if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +79,7 @@ jobs:
     name: Attractions test cases
     runs-on: windows-latest
     environment: QA
-    needs: [unit-tests, session-state-tests]
+    needs: preflight-tests
     if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v4
@@ -194,8 +170,7 @@ jobs:
     runs-on: windows-latest
     if: always()
     needs:
-      - unit-tests
-      - session-state-tests
+      - preflight-tests
       - flight-tests
       - hotel-tests
       - attractions-tests
