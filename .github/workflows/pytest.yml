@@ -54,6 +54,7 @@ jobs:
   ui-test-cases:
     name: ${{ matrix.case }}
     runs-on: windows-latest
+    environment: QA
     needs: [unit-tests, session-state-tests]
     if: ${{ !cancelled() }}
     strategy:
@@ -196,6 +197,7 @@ jobs:
   saved-trip-tests:
     name: Destructive saved-trip test
     runs-on: windows-latest
+    environment: QA
     needs: ui-test-cases
     if: ${{ !cancelled() }}
     steps:
