@@ -68,3 +68,27 @@ def test_ui_click_fill_and_selection_are_logged(
         for event in diagnostics
     )
     assert all("[request]" not in event and "[response]" not in event for event in diagnostics)
+
+
+def test_auto_upgraded_mixed_content_warning_is_not_logged(
+    browser: Browser, request: pytest.FixtureRequest
+) -> None:
+    page = browser.new_page()
+    try:
+        attach_browser_diagnostics(page, request.node)
+        page.evaluate(
+            """() => {
+                console.warn(
+                    "Mixed Content: The page was loaded over HTTPS, but requested "
+                    + "an insecure element. This request was automatically upgraded "
+                    + "to HTTPS."
+                );
+                console.warn("An unrelated browser warning.");
+            }"""
+        )
+    finally:
+        page.close()
+
+    diagnostics = request.node.stash[BROWSER_DIAGNOSTICS]
+    assert not any("Mixed Content:" in event for event in diagnostics)
+    assert any("An unrelated browser warning." in event for event in diagnostics)

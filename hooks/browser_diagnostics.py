@@ -177,6 +177,13 @@ def attach_browser_diagnostics(
                     f"'{interaction['label']}'",
                 )
                 return
+            if (
+                message.type == "warning"
+                and message.text.startswith("Mixed Content:")
+                and "This request was automatically upgraded to HTTPS"
+                in message.text
+            ):
+                return
             if message.type not in {"error", "warning"}:
                 return
             levels = {"error": logging.ERROR, "warning": logging.WARNING}
