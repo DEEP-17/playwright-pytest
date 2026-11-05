@@ -80,17 +80,32 @@ class FlightSeatMapPage(BasePage):
                 pass
 
         if not first_name.is_visible():
-            self.page.get_by_role(
-                "button", name="Skip/Move to Checkout..."
-            ).click(force=True)
+            repricing_errors: list[str] = []
+
+            def capture_repricing_error(error: Exception) -> None:
+                message = str(error)
+                if "Unable to get the reprice data" in message:
+                    repricing_errors.append(message)
+
+            self.page.on("pageerror", capture_repricing_error)
             try:
+                self.page.get_by_role(
+                    "button", name="Skip/Move to Checkout..."
+                ).click(force=True)
                 self.page.wait_for_url("**/flights/travellerinfo/**", timeout=60_000)
                 first_name.wait_for(state="visible", timeout=60_000)
             except PlaywrightTimeoutError as error:
+                if repricing_errors:
+                    raise RuntimeError(
+                        "Flight repricing failed while opening passenger details: "
+                        f"{repricing_errors[-1]}"
+                    ) from error
                 raise RuntimeError(
                     "Flight checkout did not finish loading passenger details "
                     f"at {self.page.url}."
                 ) from error
+            finally:
+                self.page.remove_listener("pageerror", capture_repricing_error)
         if no_seats_available:
             self.log_step("Continuing to checkout without selecting a seat")
         self.save_current_state("flight-traveller-details-state.json")
