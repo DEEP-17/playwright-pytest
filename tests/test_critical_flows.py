@@ -220,33 +220,31 @@ def test_c9_hotel_guest_age_is_required_and_validated(
 def test_c10_unknown_attractions_location_is_rejected_without_navigation(
     page: Page,
 ) -> None:
-    page.goto("/")
-    attractions_tab = page.get_by_role("tab", name="Attractions")
-    attractions_tab.click()
-    attractions_panel = page.get_by_role("tabpanel", name="Attractions")
-    search_field = attractions_panel.get_by_role("textbox").first
+    page.goto("/tours/search", wait_until="networkidle")
+    search_field = page.get_by_role("textbox", name="Where are you going?")
     search_field.fill("NoSuchDestinationForEmptyState")
-    attractions_panel.get_by_role(
-        "button", name=re.compile(r"search", re.IGNORECASE)
-    ).click()
+    page.get_by_role("button", name="Search").click()
 
-    expect(attractions_panel.get_by_text("Location is required")).to_be_visible()
-    expect(page).to_have_url(re.compile(r"/$"))
+    expect(page.get_by_text("Location is required")).to_be_visible()
+    expect(page).to_have_url(re.compile(r"/tours/search$"))
 
 
 @pytest.mark.regression
 def test_e4_search_attractions_and_open_details(page: Page) -> None:
-    page.goto("/tours/search")
+    page.goto("/tours/search", wait_until="networkidle")
     expect(
         page.get_by_role("heading", name="Search attractions")
     ).to_be_visible()
-    expect(
-        page.get_by_role("textbox", name="Where are you going?")
-    ).to_be_visible()
+    search_field = page.get_by_role("textbox", name="Where are you going?")
+    expect(search_field).to_be_visible()
+    search_field.fill("San Francisco")
+    page.get_by_role("button", name="Search").click()
 
-    destination_card = page.get_by_role("link", name="city").first
-    expect(destination_card).to_be_visible()
-    destination_card.click()
+    destination_heading = page.get_by_role(
+        "heading", name="San Francisco", exact=True
+    )
+    expect(destination_heading).to_be_visible()
+    destination_heading.click()
     expect(page).to_have_url(re.compile(r"/tours/[^/?]+/\d+"))
     tour_heading = page.get_by_role("heading", level=2).first
     expect(tour_heading).to_be_visible()

@@ -1,6 +1,7 @@
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base.base_page import BasePage
+from pages.flights.flight_listing_page import FlightListingPage
 
 
 class FlightTripSummaryPage(BasePage):
@@ -13,14 +14,37 @@ class FlightTripSummaryPage(BasePage):
         try:
             continue_button.wait_for(state="visible", timeout=20_000)
         except PlaywrightTimeoutError:
-            self.log_step("Checkout button is not ready; reloading trip summary once")
-            self.page.reload(wait_until="domcontentloaded")
-            try:
-                continue_button.wait_for(state="visible", timeout=20_000)
-            except PlaywrightTimeoutError as error:
-                raise RuntimeError(
-                    f"Continue to Checkout button did not load at {self.page.url}"
-                ) from error
+            expired_hold = self.page.get_by_text(
+                "Your ticket hold has expired. Please select your flight again.",
+                exact=True,
+            )
+            if expired_hold.is_visible():
+                self.log_step("Ticket hold expired; selecting a fresh flight")
+                self.page.get_by_role("button", name="Go back", exact=True).click()
+                listing_page = FlightListingPage(self.page)
+                if not listing_page.wait_for_results():
+                    raise RuntimeError(
+                        "The ticket hold expired and flight results did not reload."
+                    )
+                listing_page.select_first_result()
+                try:
+                    continue_button.wait_for(state="visible", timeout=20_000)
+                except PlaywrightTimeoutError as error:
+                    raise RuntimeError(
+                        f"Continue to Checkout button did not load after "
+                        f"reselecting a flight at {self.page.url}"
+                    ) from error
+            else:
+                self.log_step(
+                    "Checkout button is not ready; reloading trip summary once"
+                )
+                self.page.reload(wait_until="domcontentloaded")
+                try:
+                    continue_button.wait_for(state="visible", timeout=20_000)
+                except PlaywrightTimeoutError as error:
+                    raise RuntimeError(
+                        f"Continue to Checkout button did not load at {self.page.url}"
+                    ) from error
 
         self.log_step("Continuing to checkout")
         continue_button.click()

@@ -23,13 +23,22 @@ class HomePage(BasePage):
         try:
             with self.page.expect_popup(timeout=15_000) as popup:
                 saved_trips_link.click()
-            saved_trips_page = popup.value
-            saved_trips_page.wait_for_load_state("networkidle")
-            saved_trips_page.wait_for_url("**/tripplanner/saved-trips", timeout=30_000)
-            self.log_step("Saved trips page opened in a new tab")
-            return saved_trips_page
         except PlaywrightTimeoutError as popup_error:
             if self.page.url.endswith("/tripplanner/saved-trips"):
                 self.log_step("Saved trips page opened in the same tab")
                 return self.page
             raise RuntimeError("Could not open the saved trips page.") from popup_error
+
+        saved_trips_page = popup.value
+        try:
+            saved_trips_page.wait_for_url(
+                "**/tripplanner/saved-trips",
+                timeout=30_000,
+                wait_until="domcontentloaded",
+            )
+        except PlaywrightTimeoutError as error:
+            raise RuntimeError(
+                "The saved trips tab opened but did not reach the saved trips page."
+            ) from error
+        self.log_step("Saved trips page opened in a new tab")
+        return saved_trips_page

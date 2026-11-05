@@ -64,8 +64,13 @@ class FlightListingPage(BasePage):
             ).last
             if arrival_sort.count() and arrival_sort.is_visible():
                 arrival_sort.click(force=True)
+
+        self.select_first_result()
+
+    def select_first_result(self) -> None:
         self.log_step("Selecting the first matching flight")
         first_result = self.page.locator("div.flex > section.flex > div.flex").first
+        first_result.wait_for(state="visible", timeout=60_000)
         first_result.click()
         self.page.wait_for_url("**/flights/trip-summary/**", timeout=60_000)
         self.save_current_state("flight-selected-state.json")

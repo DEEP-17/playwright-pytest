@@ -6,12 +6,16 @@ from pages.base.base_page import BasePage
 
 
 class TripSavedTripsPage(BasePage):
+    def _wait_for_saved_trips(self) -> None:
+        self.page.wait_for_url("**/tripplanner/saved-trips", timeout=30_000)
+        self.wait_for_network()
+
     def saved_trip_count(self) -> int:
+        self._wait_for_saved_trips()
         return self.page.get_by_role("button", name="Delete").count()
 
     def delete_first_trip(self) -> int:
-        self.page.wait_for_url("**/tripplanner/saved-trips", timeout=30_000)
-        self.wait_for_dom()
+        self._wait_for_saved_trips()
         self.save_current_state("saved-trips-state.json")
         delete_button = self.page.get_by_role("button", name="Delete").first
         initial_count = self.saved_trip_count()
@@ -27,8 +31,7 @@ class TripSavedTripsPage(BasePage):
         return initial_count
 
     def create_trip_planner(self) -> Page:
-        self.page.wait_for_url("**/tripplanner/saved-trips", timeout=30_000)
-        self.wait_for_dom()
+        self._wait_for_saved_trips()
         self.save_current_state("saved-trips-state.json")
         create_trip = self.page.locator("button").filter(has_text="Create Trip").first
         if not create_trip.count() or not create_trip.is_visible():
