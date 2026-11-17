@@ -1,16 +1,11 @@
 from pathlib import Path
-
 from playwright.sync_api import Page
-
 from utils.session_state import save_browser_state
-
 from helpers.calendar_helper import (
     calendar_date_label,
     days_from_today,
     select_date_in_open_calendar,
 )
-
-
 class BasePage:
     def __init__(self, page: Page) -> None:
         self.page = page
