@@ -1,0 +1,2 @@
+Extract this artifact, then run `python openAllureReport.py` from this folder.
+Do not open index.html directly; browser file:// restrictions block report data.

@@ -61,6 +61,7 @@ jobs:
           testCases/unitTests/testSkipCases.py
           testCases/unitTests/testImpactAnalysis.py
           testCases/unitTests/testLogging.py
+          testCases/unitTests/testAllureReportViewer.py
       - name: Upload pytest report and browser artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -266,6 +267,8 @@ jobs:
             "test-reports\allure-results" `
             --clean `
             -o "test-reports\allure-report"
+          Copy-Item scripts\openAllureReport.py test-reports\allure-report\openAllureReport.py
+          Copy-Item scripts\allureReportInstructions.txt test-reports\allure-report\OPEN_REPORT.txt
       - name: Upload Allure HTML report
         if: ${{ always() && steps.aggregate-allure.outputs.has-results == 'true' }}
         uses: actions/upload-artifact@v4
