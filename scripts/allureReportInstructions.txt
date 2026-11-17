@@ -1,2 +1,5 @@
-Extract this artifact, then run `python openAllureReport.py` from this folder.
+Extract the entire artifact, then double-click `OPEN_REPORT.bat`.
+The launcher starts the report on localhost and opens it in your browser.
+Python 3 must be installed. If the launcher is unavailable, run
+`python openAllureReport.py` from this folder.
 Do not open index.html directly; browser file:// restrictions block report data.

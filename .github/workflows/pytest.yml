@@ -268,7 +268,17 @@ jobs:
             --clean `
             -o "test-reports\allure-report"
           Copy-Item scripts\openAllureReport.py test-reports\allure-report\openAllureReport.py
+          Copy-Item scripts\openAllureReport.bat test-reports\allure-report\OPEN_REPORT.bat
           Copy-Item scripts\allureReportInstructions.txt test-reports\allure-report\OPEN_REPORT.txt
+          $reportIndex = Join-Path (Get-Location) "test-reports\allure-report\index.html"
+          $summaryPath = Join-Path (Get-Location) "test-reports\allure-report\widgets\summary.json"
+          if (-not (Test-Path $reportIndex) -or -not (Test-Path $summaryPath)) {
+            throw "Allure report generation did not produce index.html and widgets/summary.json."
+          }
+          $summary = Get-Content $summaryPath -Raw | ConvertFrom-Json
+          if ($summary.statistic.total -le 0) {
+            throw "Allure report contains no test results."
+          }
       - name: Upload Allure HTML report
         if: ${{ always() && steps.aggregate-allure.outputs.has-results == 'true' }}
         uses: actions/upload-artifact@v4

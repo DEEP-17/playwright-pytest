@@ -85,10 +85,10 @@ Pytest writes a self-contained HTML report to `test-results/report.html` and
 Allure results to `test-results/allure-results`; failed browser tests also
 retain screenshots, videos, and traces. CI combines the Allure results and
 uploads the generated HTML report as the `allure-report` artifact.
-After downloading and extracting that artifact, run
-`python openAllureReport.py` from the extracted report folder. This serves the
-report on localhost and opens it in your browser; do not open `index.html`
-directly, because browser `file://` restrictions block the report data.
+After downloading and extracting that artifact, double-click `OPEN_REPORT.bat`
+in the extracted report folder. This serves the report on localhost and opens
+it in your browser; do not open `index.html` directly, because browser
+`file://` restrictions block the report data. Python 3 must be installed.
 To generate the HTML report locally, install Allure CLI with Java 17 and run
 `allure generate test-results/allure-results --clean -o test-results/allure-report`.
 
