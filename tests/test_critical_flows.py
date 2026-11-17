@@ -411,9 +411,7 @@ def _open_hotel_detail(
     try:
         select_button.wait_for(state="visible", timeout=15_000)
     except PlaywrightTimeoutError as error:
-        loading_state = listing_page.page.get_by_text(
-            re.compile(r"please wait|loading", re.IGNORECASE)
-        )
+        loading_state = listing_page.page.get_by_text("Please wait...", exact=True)
         if loading_state.is_visible():
             pytest.fail(
                 "Hotel inventory remained in a loading state; "
@@ -437,21 +435,6 @@ def _open_hotel_guest_form(
             "The selected hotel is unavailable for booking; "
             "the guest-form validation could not be verified."
         )
-    email_field = hotel_page.locator('input[name="email"]')
-    try:
-        email_field.wait_for(state="visible", timeout=15_000)
-    except PlaywrightTimeoutError as error:
-        loading_state = hotel_page.get_by_text(
-            re.compile(r"please wait|loading", re.IGNORECASE)
-        )
-        if loading_state.is_visible():
-            pytest.fail(
-                "Hotel booking form remained in a loading state; "
-                "form validation could not be verified."
-            )
-        raise RuntimeError(
-            "Book Now was accepted, but the hotel contact form did not open."
-        ) from error
     return hotel_page
 
 

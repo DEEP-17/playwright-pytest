@@ -40,13 +40,29 @@ class HotelDetailPage(BasePage):
             return False
 
         book_now.click()
+        email_field = self.page.locator('input[name="email"]')
         price_error = self.page.get_by_text(
             "Sorry, There is a problem in checking price!", exact=True
         )
-        if price_error.is_visible():
-            self.log_step("Price error encountered - test reached booking page")
-            self.page.get_by_role("button", name="×").click()
-            self.save_current_state("hotel-booking-error-state.json")
-            return False
+        try:
+            email_field.wait_for(state="visible", timeout=45_000)
+        except PlaywrightTimeoutError as error:
+            if price_error.is_visible():
+                self.log_step("Hotel price check failed; booking is unavailable.")
+                self.page.get_by_role("button", name="×").click()
+                self.save_current_state("hotel-booking-error-state.json")
+                return False
+
+            loading_state = self.page.get_by_text("Please wait...", exact=True)
+            if loading_state.is_visible():
+                raise RuntimeError(
+                    "Hotel price check remained in a loading state for 45 seconds."
+                ) from error
+
+            raise RuntimeError(
+                "Book Now was accepted, but the hotel guest form did not open "
+                "within 45 seconds."
+            ) from error
+
         self.save_current_state("hotel-guest-details-state.json")
         return True

@@ -86,7 +86,7 @@ def authenticated_page(
     page: Page, authenticated_state: BrowserStateFiles
 ) -> Page:
     restore_session_storage(page.context, authenticated_state.session_storage)
-    page.goto("/")
+    page.goto("/", wait_until="domcontentloaded")
     expect(
         page.get_by_role("link", name="Tripplanner saved trips")
     ).to_be_visible(timeout=30_000)
