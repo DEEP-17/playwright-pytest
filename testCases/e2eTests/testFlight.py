@@ -17,7 +17,7 @@ from utils.config import Settings
 @pytest.mark.smoke
 @pytest.mark.regression
 @pytest.mark.all
-def test_e1_flight_booking_flow(
+def testE1FlightBookingFlow(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -43,7 +43,7 @@ def test_e1_flight_booking_flow(
 
 
 @pytest.mark.regression
-def test_e5_business_class_flight_search(
+def testE5BusinessClassFlightSearch(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -64,7 +64,7 @@ def test_e5_business_class_flight_search(
 
 
 @pytest.mark.regression
-def test_e6_round_trip_search_respects_passenger_count_and_dates(
+def testE6RoundTripSearchRespectsPassengerCountAndDates(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -93,7 +93,7 @@ def test_e6_round_trip_search_respects_passenger_count_and_dates(
 
 
 @pytest.mark.regression
-def test_e7_multi_city_flight_search(
+def testE7MultiCityFlightSearch(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -118,7 +118,7 @@ def test_e7_multi_city_flight_search(
 
 
 @pytest.mark.regression
-def test_e8_flight_filters_and_arrival_sort(
+def testE8FlightFiltersAndArrivalSort(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -172,7 +172,7 @@ def test_e8_flight_filters_and_arrival_sort(
 
 
 @pytest.mark.regression
-def test_e9_selected_fare_persists_to_trip_summary(
+def testE9SelectedFarePersistsToTripSummary(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,

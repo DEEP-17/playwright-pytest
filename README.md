@@ -11,8 +11,8 @@ hotel, and trip-planner flows to synchronous Playwright with pytest.
 3. Install the browser with `python -m playwright install chromium`.
 4. Copy `.env.example` to `.env` and set `BASE_URL`, `USER_EMAIL`, and
    `USER_PASSWORD`.
-5. Run the unit checks with `pytest tests/test_calendar_helper.py
-   tests/test_support.py`, or run the end-to-end suite with `pytest`.
+5. Run the unit checks with `pytest testCases/unitTests`, or run the
+   end-to-end suite with `pytest`.
 
 The end-to-end tests authenticate before each flow. Authentication state files,
 environment files, traces, and test reports are excluded from version control.
@@ -20,7 +20,14 @@ The workbook's 23 non-network test executions are mapped to pytest cases
 `E1-E14` (only IDs present in the workbook) and `C5-C22`; C7 runs once for
 flights and once for hotels. The C14 slow-network scenario is deliberately
 excluded from CI and was not run. Locator-based critical flows are implemented
-in `tests/test_critical_flows.py` and can be selected with `pytest -m critical`.
+in `testCases/e2eTests/testCriticalFlows.py` and can be selected with
+`pytest -m critical`. Test files and functions use camelCase; pytest discovery
+is configured for the `test*.py` and `test*` naming patterns.
+
+Use `pytest --skip-case C8` to skip a case by workbook ID, or pass a node-id
+fragment such as `pytest --skip-case HotelGuestAge`. Repeat the option or use a
+comma-separated list to skip multiple cases. Skips are reported by pytest and
+do not apply unless explicitly requested.
 
 ## Browser session state and test data
 
@@ -52,8 +59,9 @@ pull requests, manual dispatch, and the daily 02:00 UTC schedule; missing
 rather than silently skipping the job. Configure those repository secrets to
 run the authenticated suites.
 
-Every pytest command streams verbose test output and DEBUG-level logs to the
-Actions console and saves DEBUG-level Python logs as `test-results/pytest.log`.
+Page-object steps use Python's `logging` library. Pytest streams INFO-level logs
+to the console and saves DEBUG-level Python logs as `test-results/pytest.log`;
+CI can override these levels to stream DEBUG output.
 Browser interaction logs show clicks, filled field labels, and selected
 options, for example `[ui] Clicked button 'Search'`; raw network request logs
 are disabled. Console warnings/errors and uncaught page errors remain visible.
@@ -73,11 +81,22 @@ deletes an existing saved trip before creating one, so its automatic CI run
 uses the configured test account. CI uploads per-job reports and a combined
 bundle named `complete-pytest-reports`; the bundle includes the summary, logs,
 session-state evidence, and failure screenshots, videos, and traces.
-Pytest writes a self-contained HTML report to `test-results/report.html`;
-failed browser tests also retain screenshots, videos, and traces.
+Pytest writes a self-contained HTML report to `test-results/report.html` and
+Allure results to `test-results/allure-results`; failed browser tests also
+retain screenshots, videos, and traces. CI combines the Allure results and
+uploads the generated HTML report as the `allure-report` artifact.
+To generate the HTML report locally, install Allure CLI with Java 17 and run
+`allure generate test-results/allure-results --clean -o test-results/allure-report`.
 
-## Page-object layout
+Pull requests run a dependency-based impact analysis. It lists changed files
+and affected pytest cases in the PR workflow summary and uploads JSON/Markdown
+reports as the `pull-request-impact-analysis` artifact. Shared configuration,
+fixtures, data, and hook changes conservatively impact the full test suite.
 
+## Project layout
+
+- `testCases/unitTests`: unit and local support checks
+- `testCases/e2eTests`: browser-driven flight, hotel, trip, and critical flows
 - `pages/base`: shared navigation, state saving, waits, and calendar selection
 - `pages/common`: home/login pages
 - `pages/flights`, `pages/hotels`, `pages/trips`: domain-specific page objects

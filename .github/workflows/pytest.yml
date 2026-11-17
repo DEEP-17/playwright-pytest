@@ -8,6 +8,36 @@ on:
   workflow_dispatch:
 
 jobs:
+  impact-analysis:
+    name: Pull request impact analysis
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Analyze changed files
+        run: >-
+          python scripts/impactAnalysis.py
+          --base "${{ github.event.pull_request.base.sha }}"
+          --head "${{ github.sha }}"
+          --markdown test-results/impact-analysis.md
+          --json test-results/impact-analysis.json
+      - name: Publish impact analysis to the PR summary
+        run: cat test-results/impact-analysis.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload impact analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: pull-request-impact-analysis
+          path: test-results/impact-analysis.*
+          if-no-files-found: error
+          retention-days: 14
+
   preflight-tests:
     name: Unit and browser session tests
     runs-on: windows-latest
@@ -23,11 +53,14 @@ jobs:
           --log-cli-level=DEBUG
           --log-file=test-results/pytest.log
           --log-file-level=DEBUG
-          tests/test_calendar_helper.py
-          tests/test_support.py
-          tests/test_ci_report.py
-          tests/test_session_state.py
-          tests/test_browser_diagnostics.py
+          testCases/unitTests/testCalendarHelper.py
+          testCases/unitTests/testSupport.py
+          testCases/unitTests/testCIReport.py
+          testCases/unitTests/testSessionState.py
+          testCases/unitTests/testBrowserDiagnostics.py
+          testCases/unitTests/testSkipCases.py
+          testCases/unitTests/testImpactAnalysis.py
+          testCases/unitTests/testLogging.py
       - name: Upload pytest report and browser artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -48,8 +81,8 @@ jobs:
         with:
           case-name: Flight scenarios
           case-id: flight-scenarios
-          test-paths: tests/test_flight.py tests/test_critical_flows.py
-          test-filter: test_e1 or test_e5 or test_e6 or test_e7 or test_e8 or test_e9 or c5 or c6 or (c7 and flight) or c13 or c15 or c21 or c22
+          test-paths: testCases/e2eTests/testFlight.py testCases/e2eTests/testCriticalFlows.py
+          test-filter: testE1 or testE5 or testE6 or testE7 or testE8 or testE9 or c5 or c6 or (c7 and flight) or c13 or c15 or c21 or c22
           authenticated: "true"
           base-url: ${{ secrets.BASE_URL }}
           user-email: ${{ secrets.USER_EMAIL }}
@@ -66,8 +99,8 @@ jobs:
         with:
           case-name: Hotel scenarios
           case-id: hotel-scenarios
-          test-paths: tests/test_hotel.py tests/test_critical_flows.py
-          test-filter: test_e2 or test_e10 or (c7 and hotel) or c8 or c9
+          test-paths: testCases/e2eTests/testHotel.py testCases/e2eTests/testCriticalFlows.py
+          test-filter: testE2 or testE10 or (c7 and hotel) or c8 or c9
           authenticated: "true"
           base-url: ${{ secrets.BASE_URL }}
           user-email: ${{ secrets.USER_EMAIL }}
@@ -84,8 +117,8 @@ jobs:
         with:
           case-name: Public attractions validation
           case-id: public-attractions
-          test-paths: tests/test_critical_flows.py
-          test-filter: test_e4 or c10
+          test-paths: testCases/e2eTests/testCriticalFlows.py
+          test-filter: testE4 or c10
           authenticated: "false"
           base-url: ${{ secrets.BASE_URL }}
 
@@ -133,7 +166,7 @@ jobs:
           --log-file=test-results/pytest.log
           --log-file-level=DEBUG
           --junitxml=test-results/junit-saved-trip.xml
-          tests/test_trip.py
+          testCases/e2eTests/testTrip.py
       - name: Verify authenticated session-state files
         if: always()
         shell: pwsh
@@ -184,6 +217,63 @@ jobs:
         with:
           pattern: pytest-report-*
           path: test-reports
+      - name: Aggregate Allure results
+        id: aggregate-allure
+        if: always()
+        shell: pwsh
+        run: |
+          $target = Join-Path (Get-Location) "test-reports\allure-results"
+          New-Item -ItemType Directory -Force $target | Out-Null
+          $sourceFiles = Get-ChildItem "test-reports" -Recurse -File |
+            Where-Object {
+              $_.Directory.Name -eq "allure-results" -and
+              $_.Directory.FullName -ne $target
+            }
+          foreach ($file in $sourceFiles) {
+            Copy-Item -LiteralPath $file.FullName -Destination $target
+          }
+          $hasResults = [bool]($sourceFiles | Where-Object { $_.Name -like "*-result.json" })
+          "has-results=$($hasResults.ToString().ToLowerInvariant())" |
+            Add-Content $env:GITHUB_OUTPUT
+      - uses: actions/setup-java@v4
+        if: ${{ always() && steps.aggregate-allure.outputs.has-results == 'true' }}
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Allure command line
+        if: ${{ always() && steps.aggregate-allure.outputs.has-results == 'true' }}
+        shell: pwsh
+        run: |
+          $version = "2.35.1"
+          $archive = Join-Path $env:RUNNER_TEMP "allure-$version.zip"
+          $destination = Join-Path $env:RUNNER_TEMP "allure-cli"
+          Invoke-WebRequest `
+            -Uri "https://github.com/allure-framework/allure2/releases/download/$version/allure-$version.zip" `
+            -OutFile $archive
+          $expectedHash = "3cb17dd207291fe120c99a0e59919a45de656debc416c2ab3a4a2e1aa997aa54"
+          $actualHash = (Get-FileHash -Path $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $expectedHash) {
+            throw "Allure CLI archive checksum verification failed."
+          }
+          Expand-Archive -Path $archive -DestinationPath $destination -Force
+          Join-Path $destination "allure-$version\bin" |
+            Add-Content $env:GITHUB_PATH
+      - name: Generate Allure HTML report
+        if: ${{ always() && steps.aggregate-allure.outputs.has-results == 'true' }}
+        shell: pwsh
+        run: |
+          & "$env:RUNNER_TEMP\allure-cli\allure-2.35.1\bin\allure.bat" generate `
+            "test-reports\allure-results" `
+            --clean `
+            -o "test-reports\allure-report"
+      - name: Upload Allure HTML report
+        if: ${{ always() && steps.aggregate-allure.outputs.has-results == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: test-reports/allure-report/
+          if-no-files-found: error
+          retention-days: 14
       - name: Build and validate the 23-case report
         if: always()
         run: >-

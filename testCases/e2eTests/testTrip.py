@@ -14,7 +14,7 @@ from pages.trips.trip_search_page import TripSearchPage
 
 @pytest.mark.regression
 @pytest.mark.all
-def test_e12_trip_planner_creation_flow(
+def testE12TripPlannerCreationFlow(
     authenticated_page: Page,
     home_page: HomePage,
     test_data: TestData,
@@ -32,7 +32,7 @@ def test_e12_trip_planner_creation_flow(
 
 
 @pytest.mark.regression
-def test_e13_saved_itinerary_remains_in_saved_trips(
+def testE13SavedItineraryRemainsInSavedTrips(
     authenticated_page: Page,
     home_page: HomePage,
     test_data: TestData,
@@ -60,7 +60,7 @@ def test_e13_saved_itinerary_remains_in_saved_trips(
 
 
 @pytest.mark.regression
-def test_e14_delete_old_trip_create_fresh_trip_and_verify_after_refresh(
+def testE14DeleteOldTripCreateFreshTripAndVerifyAfterRefresh(
     authenticated_page: Page,
     home_page: HomePage,
     test_data: TestData,

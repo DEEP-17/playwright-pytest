@@ -8,7 +8,7 @@ from hooks.browser_diagnostics import (
 )
 
 
-def test_diagnostics_redact_credentials_and_query_strings(
+def testDiagnosticsRedactCredentialsAndQueryStrings(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("USER_EMAIL", "qa@example.test")
@@ -24,7 +24,7 @@ def test_diagnostics_redact_credentials_and_query_strings(
     assert "token=private" not in message
 
 
-def test_ui_click_fill_and_selection_are_logged(
+def testUiClickFillAndSelectionAreLogged(
     browser: Browser, request: pytest.FixtureRequest
 ) -> None:
     page = browser.new_page()
@@ -70,7 +70,7 @@ def test_ui_click_fill_and_selection_are_logged(
     assert all("[request]" not in event and "[response]" not in event for event in diagnostics)
 
 
-def test_auto_upgraded_mixed_content_warning_is_not_logged(
+def testAutoUpgradedMixedContentWarningIsNotLogged(
     browser: Browser, request: pytest.FixtureRequest
 ) -> None:
     page = browser.new_page()

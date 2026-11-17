@@ -1,17 +1,23 @@
+import logging
 from pathlib import Path
+
 from playwright.sync_api import Page
+
 from utils.session_state import save_browser_state
+
 from helpers.calendar_helper import (
     calendar_date_label,
     days_from_today,
     select_date_in_open_calendar,
 )
+
+
 class BasePage:
     def __init__(self, page: Page) -> None:
         self.page = page
 
     def log_step(self, message: str) -> None:
-        print(f"[STAGE] [{type(self).__name__}] {message}")
+        logging.getLogger(__name__).info("[%s] %s", type(self).__name__, message)
 
     def save_current_state(self, file_name: str) -> Path:
         state_files = save_browser_state(self.page.context, file_name)

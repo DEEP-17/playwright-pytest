@@ -4,7 +4,7 @@ from utils.config import Settings
 from utils.test_data import load_test_data
 
 
-def test_settings_are_read_from_environment_values() -> None:
+def testSettingsAreReadFromEnvironmentValues() -> None:
     settings = Settings.from_environment(
         {
             "BASE_URL": "https://example.test/",
@@ -18,7 +18,7 @@ def test_settings_are_read_from_environment_values() -> None:
     assert settings.user_password == "test-password"
 
 
-def test_test_data_contains_all_end_to_end_scenarios() -> None:
+def testTestDataContainsAllEndToEndScenarios() -> None:
     test_data = load_test_data()
     assert isinstance(test_data, TestData)
     assert test_data.flight.origin_query
@@ -26,14 +26,14 @@ def test_test_data_contains_all_end_to_end_scenarios() -> None:
     assert test_data.trip.origin_query
 
 
-def test_shared_pytest_fixtures_are_registered(
+def testSharedPytestFixturesAreRegistered(
     settings: Settings, test_data: TestData
 ) -> None:
     assert isinstance(settings, Settings)
     assert isinstance(test_data, TestData)
 
 
-def test_data_factory_applies_nested_overrides_without_mutating_source() -> None:
+def testDataFactoryAppliesNestedOverridesWithoutMutatingSource() -> None:
     source = {
         "flight": {
             "fromSearch": "origin",

@@ -20,7 +20,7 @@ from utils.config import Settings
 @pytest.mark.critical
 @pytest.mark.regression
 @pytest.mark.parametrize("booking_form", ("flight", "hotel"))
-def test_c7_invalid_contact_details_block_booking(
+def testC7InvalidContactDetailsBlockBooking(
     booking_form: str,
     authenticated_page: Page,
     home_page: HomePage,
@@ -79,7 +79,7 @@ def test_c7_invalid_contact_details_block_booking(
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c5_flight_without_seats_can_continue_gracefully(
+def testC5FlightWithoutSeatsCanContinueGracefully(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -109,7 +109,7 @@ def test_c5_flight_without_seats_can_continue_gracefully(
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c6_flight_checkout_requires_passenger_details(
+def testC6FlightCheckoutRequiresPassengerDetails(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -142,7 +142,7 @@ def test_c6_flight_checkout_requires_passenger_details(
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c8_hotel_sold_out_or_price_error_has_a_recovery_state(
+def testC8HotelSoldOutOrPriceErrorHasARecoveryState(
     authenticated_page: Page,
     home_page: HomePage,
     hotel_search_page: HotelSearchPage,
@@ -190,7 +190,7 @@ def test_c8_hotel_sold_out_or_price_error_has_a_recovery_state(
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c9_hotel_guest_age_is_required_and_validated(
+def testC9HotelGuestAgeIsRequiredAndValidated(
     authenticated_page: Page,
     home_page: HomePage,
     hotel_search_page: HotelSearchPage,
@@ -217,7 +217,7 @@ def test_c9_hotel_guest_age_is_required_and_validated(
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c10_unknown_attractions_location_is_rejected_without_navigation(
+def testC10UnknownAttractionsLocationIsRejectedWithoutNavigation(
     page: Page,
 ) -> None:
     page.goto("/tours/search", wait_until="networkidle")
@@ -230,7 +230,7 @@ def test_c10_unknown_attractions_location_is_rejected_without_navigation(
 
 
 @pytest.mark.regression
-def test_e4_search_attractions_and_open_details(page: Page) -> None:
+def testE4SearchAttractionsAndOpenDetails(page: Page) -> None:
     page.goto("/tours/search", wait_until="networkidle")
     expect(
         page.get_by_role("heading", name="Search attractions")
@@ -260,7 +260,7 @@ def test_e4_search_attractions_and_open_details(page: Page) -> None:
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c13_extreme_flight_price_filter_reduces_results_and_reset_restores_them(
+def testC13ExtremeFlightPriceFilterReducesResultsAndResetRestoresThem(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -282,7 +282,7 @@ def test_c13_extreme_flight_price_filter_reduces_results_and_reset_restores_them
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c15_back_and_forward_restore_flight_and_hotel_navigation(
+def testC15BackAndForwardRestoreFlightAndHotelNavigation(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -332,7 +332,7 @@ def test_c15_back_and_forward_restore_flight_and_hotel_navigation(
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c21_combined_flight_filters_narrow_results_and_reset_restores_them(
+def testC21CombinedFlightFiltersNarrowResultsAndResetRestoresThem(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,
@@ -362,7 +362,7 @@ def test_c21_combined_flight_filters_narrow_results_and_reset_restores_them(
 
 @pytest.mark.critical
 @pytest.mark.regression
-def test_c22_refresh_during_flight_checkout_recovers_selected_itinerary(
+def testC22RefreshDuringFlightCheckoutRecoversSelectedItinerary(
     authenticated_page: Page,
     home_page: HomePage,
     flight_search_page: FlightSearchPage,

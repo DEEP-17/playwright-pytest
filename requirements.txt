@@ -1,4 +1,5 @@
 pytest>=8.0
 pytest-html>=4.1.1
+allure-pytest>=2.13.5
 pytest-playwright>=0.7.0
 python-dotenv>=1.0

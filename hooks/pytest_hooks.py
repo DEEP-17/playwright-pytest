@@ -10,7 +10,53 @@ from playwright.sync_api import Page
 
 from hooks.browser_diagnostics import BROWSER_DIAGNOSTICS
 
+
+def _skip_reason(node_id: str, selectors: list[str]) -> str | None:
+    matching = []
+    for selector in selectors:
+        if re.fullmatch(r"[ec]\d+", selector, re.IGNORECASE):
+            matches = re.search(
+                rf"test{re.escape(selector)}(?!\d)", node_id, re.IGNORECASE
+            )
+        else:
+            matches = re.search(re.escape(selector), node_id, re.IGNORECASE)
+        if matches:
+            matching.append(selector)
+    if not matching:
+        return None
+    return "Skipped by --skip-case: " + ", ".join(matching)
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--skip-case",
+        action="append",
+        default=[],
+        metavar="ID_OR_NODE",
+        help=(
+            "Skip matching case IDs (for example C8) or node ID text; "
+            "may be repeated or comma-separated."
+        ),
+    )
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    selectors = [
+        selector.strip()
+        for value in config.getoption("skip_case")
+        for selector in value.split(",")
+        if selector.strip()
+    ]
+    for item in items:
+        reason = _skip_reason(item.nodeid, selectors)
+        if reason:
+            item.add_marker(pytest.mark.skip(reason=reason))
+
+
 def _prepare_output_directories(config: pytest.Config) -> None:
+    (Path(config.rootpath) / "test-results").mkdir(parents=True, exist_ok=True)
     (Path(config.rootpath) / ".auth").mkdir(parents=True, exist_ok=True)
     html_path = getattr(config.option, "htmlpath", None)
     if html_path:

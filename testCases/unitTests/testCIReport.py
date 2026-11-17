@@ -7,13 +7,13 @@ from scripts.ci_report import (
 )
 
 
-def test_ci_report_reads_and_groups_junit_results(tmp_path: Path) -> None:
+def testCiReportReadsAndGroupsJunitResults(tmp_path: Path) -> None:
     report_dir = tmp_path / "pytest-report-flight-scenarios"
     report_dir.mkdir()
     (report_dir / "junit-flight-scenarios.xml").write_text(
         """<testsuites><testsuite>
-<testcase classname="tests.test_flight" name="test_search" time="1.25" />
-<testcase classname="tests.test_flight" name="test_checkout" time="0.50">
+<testcase classname="testCases.e2eTests.testFlight" name="testSearch" time="1.25" />
+<testcase classname="testCases.e2eTests.testFlight" name="testCheckout" time="0.50">
   <failure message="assertion failed">&lt;unexpected&gt;</failure>
 </testcase>
 </testsuite></testsuites>""",
@@ -32,15 +32,15 @@ def test_ci_report_reads_and_groups_junit_results(tmp_path: Path) -> None:
     assert "&lt;unexpected&gt;" in report
 
 
-def test_ci_report_flags_skipped_and_duplicate_results(tmp_path: Path) -> None:
+def testCiReportFlagsSkippedAndDuplicateResults(tmp_path: Path) -> None:
     report_dir = tmp_path / "pytest-report-hotel-scenarios"
     report_dir.mkdir()
     (report_dir / "junit-hotel-scenarios.xml").write_text(
         """<testsuite>
-<testcase classname="tests.test_hotel" name="test_search" time="1.0">
+<testcase classname="testCases.e2eTests.testHotel" name="testSearch" time="1.0">
   <skipped message="not selected" />
 </testcase>
-<testcase classname="tests.test_hotel" name="test_search" time="1.0" />
+<testcase classname="testCases.e2eTests.testHotel" name="testSearch" time="1.0" />
 </testsuite>""",
         encoding="utf-8",
     )
@@ -52,7 +52,7 @@ def test_ci_report_flags_skipped_and_duplicate_results(tmp_path: Path) -> None:
     assert any("SKIPPED" in error for error in errors)
 
 
-def test_ci_report_accepts_exact_23_case_lane_breakdown(tmp_path: Path) -> None:
+def testCiReportAcceptsExact23CaseLaneBreakdown(tmp_path: Path) -> None:
     lane_counts = {
         "flight-scenarios": 13,
         "hotel-scenarios": 5,
@@ -63,7 +63,7 @@ def test_ci_report_accepts_exact_23_case_lane_breakdown(tmp_path: Path) -> None:
         report_dir = tmp_path / f"pytest-report-{lane}"
         report_dir.mkdir()
         cases = "".join(
-            f'<testcase classname="tests.{lane}" name="test_case_{index}" time="1.0" />'
+            f'<testcase classname="testCases.e2eTests.{lane}" name="testCase{index}" time="1.0" />'
             for index in range(count)
         )
         (report_dir / f"junit-{lane}.xml").write_text(

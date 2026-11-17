@@ -11,7 +11,7 @@ from utils.session_state import (
 )
 
 
-def test_default_session_state_directory_is_created(
+def testDefaultSessionStateDirectoryIsCreated(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr("utils.session_state.PROJECT_ROOT", tmp_path)
@@ -25,7 +25,7 @@ def test_default_session_state_directory_is_created(
     )
 
 
-def test_browser_state_round_trip_restores_cookies_and_all_web_storage(
+def testBrowserStateRoundTripRestoresCookiesAndAllWebStorage(
     browser: Browser, tmp_path: Path
 ) -> None:
     url = "https://state.example.test"

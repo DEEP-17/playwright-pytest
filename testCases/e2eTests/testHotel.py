@@ -15,7 +15,7 @@ from utils.config import Settings
 @pytest.mark.smoke
 @pytest.mark.regression
 @pytest.mark.all
-def test_e2_hotel_booking_flow(
+def testE2HotelBookingFlow(
     authenticated_page: Page,
     home_page: HomePage,
     hotel_search_page: HotelSearchPage,
@@ -40,7 +40,7 @@ def test_e2_hotel_booking_flow(
 
 
 @pytest.mark.regression
-def test_e10_hotel_room_and_guest_count_are_preserved(
+def testE10HotelRoomAndGuestCountArePreserved(
     authenticated_page: Page,
     home_page: HomePage,
     hotel_search_page: HotelSearchPage,
