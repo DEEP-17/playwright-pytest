@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import argparse
 import ast
 import json
@@ -7,7 +6,6 @@ import os
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
-
 
 _EXCLUDED_DIRECTORIES = {
     ".auth",
@@ -25,20 +23,17 @@ _SHARED_PATHS = {
 }
 _SHARED_DIRECTORIES = {".github", "data", "fixtures", "hooks", "utils"}
 
-
 @dataclass(frozen=True)
 class ImpactReport:
     changed_files: list[str]
     impacted_tests: list[str]
     scope: str
 
-
 def _module_name(root: Path, source_path: Path) -> str:
     relative_path = source_path.relative_to(root)
     if relative_path.name == "__init__.py":
         return ".".join(relative_path.parent.parts)
     return ".".join(relative_path.with_suffix("").parts)
-
 
 def _python_files(root: Path) -> list[Path]:
     files = []
@@ -50,7 +45,6 @@ def _python_files(root: Path) -> list[Path]:
             Path(current) / name for name in names if name.endswith(".py")
         )
     return files
-
 
 def _imports_for_module(
     source: str, module_name: str, is_package: bool
@@ -83,7 +77,6 @@ def _imports_for_module(
                 )
     return imports
 
-
 def _build_dependency_graph(
     root: Path,
 ) -> tuple[dict[str, set[str]], dict[str, Path]]:
@@ -106,7 +99,6 @@ def _build_dependency_graph(
         graph[module_name] = dependencies
     return graph, modules
 
-
 def _test_case_names(path: Path) -> list[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     names = []
@@ -123,7 +115,6 @@ def _test_case_names(path: Path) -> list[str]:
             )
     return names
 
-
 def _is_shared_change(path: str) -> bool:
     normalized = Path(path).as_posix()
     parts = Path(normalized).parts
@@ -131,13 +122,11 @@ def _is_shared_change(path: str) -> bool:
         parts and parts[0] in _SHARED_DIRECTORIES
     )
 
-
 def analyze_impact(root: Path, changed_files: list[str]) -> ImpactReport:
     test_root = root / "testCases"
     test_files = sorted(test_root.rglob("test*.py"))
     if not test_files:
         raise FileNotFoundError(f"No pytest files found under {test_root}")
-
     graph, modules = _build_dependency_graph(root)
     changed_paths = {Path(path).as_posix() for path in changed_files}
     if any(_is_shared_change(path) for path in changed_paths):
@@ -184,7 +173,6 @@ def analyze_impact(root: Path, changed_files: list[str]) -> ImpactReport:
 
         if broad_impact:
             impacted_files = test_files
-
     impacted_tests = sorted(
         f"{_module_name(root, path)}::{name}"
         for path in impacted_files
@@ -196,7 +184,6 @@ def analyze_impact(root: Path, changed_files: list[str]) -> ImpactReport:
         impacted_tests=impacted_tests,
         scope=scope,
     )
-
 
 def render_markdown(report: ImpactReport) -> str:
     lines = [
@@ -214,7 +201,6 @@ def render_markdown(report: ImpactReport) -> str:
     lines.append("")
     return "\n".join(lines)
 
-
 def _changed_files(base: str, head: str) -> list[str]:
     result = subprocess.run(
         ["git", "diff", "--name-only", "--no-renames", f"{base}...{head}"],
@@ -223,7 +209,6 @@ def _changed_files(base: str, head: str) -> list[str]:
         text=True,
     )
     return [path for path in result.stdout.splitlines() if path]
-
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -234,7 +219,6 @@ def main() -> int:
     parser.add_argument("--markdown", type=Path, required=True)
     parser.add_argument("--json", type=Path, required=True)
     args = parser.parse_args()
-
     root = Path(__file__).resolve().parents[1]
     report = analyze_impact(root, _changed_files(args.base, args.head))
     args.markdown.parent.mkdir(parents=True, exist_ok=True)
@@ -246,7 +230,6 @@ def main() -> int:
         f"({report.scope} impact)."
     )
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

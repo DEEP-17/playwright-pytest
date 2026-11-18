@@ -1,9 +1,6 @@
 from urllib.parse import urljoin
-
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
-
 from pages.base.base_page import BasePage
-
 
 class TripSavedTripsPage(BasePage):
     def _wait_for_saved_trips(self) -> None:
@@ -21,7 +18,6 @@ class TripSavedTripsPage(BasePage):
         initial_count = self.saved_trip_count()
         if initial_count == 0:
             raise RuntimeError("Cannot delete a saved trip: no saved trips exist.")
-
         self.page.once("dialog", lambda dialog: dialog.accept())
         delete_button.click(force=True)
         self.log_step("Old trip deletion requested.")
@@ -51,7 +47,6 @@ class TripSavedTripsPage(BasePage):
             )
             self.save_current_state("trip-planner-created-state.json")
             return planner_page
-
         try:
             with self.page.expect_popup(timeout=30_000) as popup:
                 create_trip.click()

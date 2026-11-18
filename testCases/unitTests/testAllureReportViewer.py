@@ -2,9 +2,7 @@ import json
 from pathlib import Path
 from threading import Thread
 from urllib.request import urlopen
-
 from scripts.openAllureReport import create_server
-
 
 def testAllureViewerServesReportDataOverHttp(tmp_path: Path) -> None:
     (tmp_path / "index.html").write_text("<html>Allure</html>", encoding="utf-8")
@@ -15,7 +13,6 @@ def testAllureViewerServesReportDataOverHttp(tmp_path: Path) -> None:
     server = create_server(tmp_path)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
-
     try:
         with urlopen(
             f"http://127.0.0.1:{server.server_port}/widgets/summary.json"

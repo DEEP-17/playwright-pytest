@@ -1,7 +1,5 @@
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
-
 from pages.base.base_page import BasePage
-
 
 class HomePage(BasePage):
     def navigate_to_flights(self) -> None:
@@ -28,7 +26,6 @@ class HomePage(BasePage):
                 self.log_step("Saved trips page opened in the same tab")
                 return self.page
             raise RuntimeError("Could not open the saved trips page.") from popup_error
-
         saved_trips_page = popup.value
         try:
             saved_trips_page.wait_for_url(

@@ -1,9 +1,6 @@
 import re
-
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
 from pages.base.base_page import BasePage
-
 
 class FlightListingPage(BasePage):
     def wait_for_results(self, timeout: int = 60_000) -> bool:
@@ -28,13 +25,11 @@ class FlightListingPage(BasePage):
         if not self.wait_for_results():
             raise RuntimeError("Flight search completed without displaying results.")
         self.save_current_state("flight-results-state.json")
-
         stop_filter = self.page.get_by_text(re.compile(r"^2 Stops?$")).first
         if stop_filter.count() and stop_filter.is_visible():
             stop_filter.dispatch_event("click")
         else:
             self.log_step("Two-stop filter is not available for these results")
-
         slider = self.page.locator(".rc-slider").first
         box = slider.bounding_box()
         if box:
@@ -44,7 +39,6 @@ class FlightListingPage(BasePage):
             self.page.mouse.down()
             self.page.mouse.move(box["x"] + box["width"] * 0.3, center_y, steps=20)
             self.page.mouse.up()
-
         airline_filter = self.page.locator('[id="Air Canada"]')
         if airline_filter.count() and airline_filter.first.is_visible():
             self.log_step("Filtering by Air Canada")
@@ -52,7 +46,6 @@ class FlightListingPage(BasePage):
             self.wait_for_network()
         else:
             self.log_step("Air Canada filter is not available for these results")
-
         sort_button = self.page.get_by_role(
             "button", name="Sort by : Price (low to high)"
         )
@@ -64,7 +57,6 @@ class FlightListingPage(BasePage):
             ).last
             if arrival_sort.count() and arrival_sort.is_visible():
                 arrival_sort.click(force=True)
-
         self.select_first_result()
 
     def select_first_result(self) -> None:

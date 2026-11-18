@@ -2,12 +2,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
-
 from dotenv import load_dotenv
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
-
 
 @dataclass(frozen=True)
 class Settings:

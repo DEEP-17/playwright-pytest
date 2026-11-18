@@ -1,7 +1,5 @@
 from data.objects import HotelData
-
 from pages.base.base_page import BasePage
-
 
 class HotelGuestInfoPage(BasePage):
     def fill_info(self, data: HotelData, email: str) -> None:

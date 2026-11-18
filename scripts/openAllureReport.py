@@ -1,12 +1,10 @@
 from __future__ import annotations
-
 import argparse
 import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
-
 
 def create_server(report_directory: Path, port: int = 0) -> ThreadingHTTPServer:
     report_directory = report_directory.resolve()
@@ -19,7 +17,6 @@ def create_server(report_directory: Path, port: int = 0) -> ThreadingHTTPServer:
     )
     return ThreadingHTTPServer(("127.0.0.1", port), handler)
 
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Serve an extracted Allure HTML report over localhost."
@@ -31,7 +28,6 @@ def main() -> None:
         help="Allure report directory (defaults to this script's directory).",
     )
     args = parser.parse_args()
-
     server = create_server(args.report_dir)
     report_url = f"http://127.0.0.1:{server.server_port}/"
     thread = Thread(target=server.serve_forever, daemon=True)
@@ -45,7 +41,6 @@ def main() -> None:
     finally:
         server.shutdown()
         server.server_close()
-
 
 if __name__ == "__main__":
     main()

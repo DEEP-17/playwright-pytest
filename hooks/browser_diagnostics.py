@@ -4,22 +4,17 @@ import os
 import re
 from typing import Protocol
 from urllib.parse import urlsplit, urlunsplit
-
 import pytest
 from playwright.sync_api import ConsoleMessage, Page
-
 BROWSER_DIAGNOSTICS: pytest.StashKey[list[str]] = pytest.StashKey()
-
 
 class _DiagnosticStash(Protocol):
     def setdefault(
         self, key: pytest.StashKey[list[str]], default: list[str], /
     ) -> list[str]: ...
 
-
 class _StashNode(Protocol):
     stash: _DiagnosticStash
-
 
 _UI_INTERACTION_SCRIPT = r"""
 (() => {
@@ -103,7 +98,6 @@ _UI_INTERACTION_SCRIPT = r"""
 })();
 """
 
-
 def _safe_message(message: str) -> str:
     message = re.sub(
         r"https?://[^\s\"'<>]+",
@@ -129,7 +123,6 @@ def _safe_message(message: str) -> str:
     )
     return message
 
-
 def _safe_url(url: str) -> str:
     parsed = urlsplit(url)
     safe_authority = parsed.netloc.rsplit("@", 1)[-1]
@@ -144,7 +137,6 @@ def _safe_url(url: str) -> str:
         safe_url,
         flags=re.IGNORECASE,
     )
-
 
 def attach_browser_diagnostics(
     page: Page, node: _StashNode

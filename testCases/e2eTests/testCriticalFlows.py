@@ -1,8 +1,6 @@
 import re
-
 import pytest
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
-
 from data.objects import FlightData, HotelData, TestData
 from pages.common.home_page import HomePage
 from pages.flights.flight_listing_page import FlightListingPage
@@ -15,8 +13,6 @@ from pages.hotels.hotel_guest_info_page import HotelGuestInfoPage
 from pages.hotels.hotel_listing_page import HotelListingPage
 from pages.hotels.hotel_search_page import HotelSearchPage
 from utils.config import Settings
-
-
 @pytest.mark.critical
 @pytest.mark.regression
 @pytest.mark.parametrize("booking_form", ("flight", "hotel"))
@@ -56,7 +52,6 @@ def testC7InvalidContactDetailsBlockBooking(
         HotelGuestInfoPage(form_page).fill_info(
             test_data.hotel, _required_email(settings)
         )
-
     for selector, value in (
         ('input[name="email"]', "not-an-email"),
         ('input[name="phone"]', "12"),
@@ -65,17 +60,14 @@ def testC7InvalidContactDetailsBlockBooking(
         field = form_page.locator(selector)
         expect(field).to_be_visible()
         field.fill(value)
-
     submit = _booking_submit_button(form_page)
     if submit.is_enabled():
         submit.click()
-
     _expect_validation_feedback(
         form_page,
         'input[name="email"], input[name="phone"], input[name="zipcode"]',
     )
     expect(form_page.locator('input[name="email"]')).to_be_visible()
-
 
 @pytest.mark.critical
 @pytest.mark.regression
@@ -92,7 +84,6 @@ def testC5FlightWithoutSeatsCanContinueGracefully(
     flight_search_page.search_flight(test_data.flight)
     flight_listing_page.filter_and_select()
     flight_trip_summary_page.proceed()
-
     no_seats_available = flight_seat_map_page.handle_seats()
     if no_seats_available:
         expect(
@@ -105,7 +96,6 @@ def testC5FlightWithoutSeatsCanContinueGracefully(
     expect(
         authenticated_page.locator('input[name^="firstName"]').first
     ).to_be_visible(timeout=60_000)
-
 
 @pytest.mark.critical
 @pytest.mark.regression
@@ -129,16 +119,13 @@ def testC6FlightCheckoutRequiresPassengerDetails(
     first_name = authenticated_page.locator('input[name^="firstName"]').first
     expect(first_name).to_be_visible(timeout=60_000)
     assert first_name.input_value() == ""
-
     submit = _booking_submit_button(authenticated_page)
     if submit.is_enabled():
         submit.click()
-
     _expect_validation_feedback(
         authenticated_page, 'input[name^="firstName"], input[name^="lastName"]'
     )
     expect(first_name).to_be_visible()
-
 
 @pytest.mark.critical
 @pytest.mark.regression
@@ -181,12 +168,10 @@ def testC8HotelSoldOutOrPriceErrorHasARecoveryState(
                     "Hotel price check remained in a loading state; "
                     "the fallback could not be verified."
                 )
-
             recovery_message = detail_page.get_by_text(
                 re.compile(r"sold out|search other hotels", re.IGNORECASE)
             )
             expect(recovery_message.first).to_be_visible()
-
 
 @pytest.mark.critical
 @pytest.mark.regression
@@ -206,14 +191,11 @@ def testC9HotelGuestAgeIsRequiredAndValidated(
     )
     age = guest_page.get_by_role("textbox", name="Ex. 35")
     age.fill("")
-
     submit = _booking_submit_button(guest_page)
     if submit.is_enabled():
         submit.click()
-
     _expect_validation_feedback(guest_page, 'input[placeholder="Ex. 35"]')
     expect(age).to_be_visible()
-
 
 @pytest.mark.critical
 @pytest.mark.regression
@@ -224,10 +206,8 @@ def testC10UnknownAttractionsLocationIsRejectedWithoutNavigation(
     search_field = page.get_by_role("textbox", name="Where are you going?")
     search_field.fill("NoSuchDestinationForEmptyState")
     page.get_by_role("button", name="Search").click()
-
     expect(page.get_by_text("Location is required")).to_be_visible()
     expect(page).to_have_url(re.compile(r"/tours/search$"))
-
 
 @pytest.mark.regression
 def testE4SearchAttractionsAndOpenDetails(page: Page) -> None:
@@ -239,7 +219,6 @@ def testE4SearchAttractionsAndOpenDetails(page: Page) -> None:
     expect(search_field).to_be_visible()
     search_field.fill("San Francisco")
     page.get_by_role("button", name="Search").click()
-
     destination_heading = page.get_by_role(
         "heading", name="San Francisco", exact=True
     )
@@ -248,7 +227,6 @@ def testE4SearchAttractionsAndOpenDetails(page: Page) -> None:
     expect(page).to_have_url(re.compile(r"/tours/[^/?]+/\d+"))
     tour_heading = page.get_by_role("heading", level=2).first
     expect(tour_heading).to_be_visible()
-
     with page.expect_popup() as detail_page_info:
         tour_heading.click()
     detail_page = detail_page_info.value
@@ -256,7 +234,6 @@ def testE4SearchAttractionsAndOpenDetails(page: Page) -> None:
     expect(detail_page.get_by_role("heading", level=1)).to_be_visible(
         timeout=60_000
     )
-
 
 @pytest.mark.critical
 @pytest.mark.regression
@@ -279,7 +256,6 @@ def testC13ExtremeFlightPriceFilterReducesResultsAndResetRestoresThem(
     _set_price_filter_to_extreme(authenticated_page)
     _expect_filtered_flights_and_reset(authenticated_page, initial_count)
 
-
 @pytest.mark.critical
 @pytest.mark.regression
 def testC15BackAndForwardRestoreFlightAndHotelNavigation(
@@ -296,7 +272,6 @@ def testC15BackAndForwardRestoreFlightAndHotelNavigation(
     flight_listing_page.filter_and_select()
     selected_url = authenticated_page.url
     expect(authenticated_page).to_have_url(re.compile(r"/flights/trip-summary/"))
-
     authenticated_page.go_back()
     expect(authenticated_page).to_have_url(re.compile(r"/flights/listing-flights/"))
     expect(
@@ -305,13 +280,11 @@ def testC15BackAndForwardRestoreFlightAndHotelNavigation(
     authenticated_page.go_forward()
     expect(authenticated_page).to_have_url(selected_url)
     expect(authenticated_page.get_by_role("heading", name="Trip Summary")).to_be_visible()
-
     home_page.navigate_to_hotels()
     hotel_search_page.search(test_data.hotel)
     expect(authenticated_page).to_have_url(re.compile(r"/hotel/listing-stay/"))
     hotel_results_url = authenticated_page.url
     hotel_detail_page = hotel_listing_page.open_hotel_detail()
-
     if hotel_detail_page is authenticated_page:
         authenticated_page.go_back()
         expect(authenticated_page).to_have_url(hotel_results_url)
@@ -328,7 +301,6 @@ def testC15BackAndForwardRestoreFlightAndHotelNavigation(
         expect(
             authenticated_page.locator("button").filter(has_text="Select").first
         ).to_be_visible(timeout=60_000)
-
 
 @pytest.mark.critical
 @pytest.mark.regression
@@ -359,7 +331,6 @@ def testC21CombinedFlightFiltersNarrowResultsAndResetRestoresThem(
         authenticated_page, initial_count, allow_empty=True
     )
 
-
 @pytest.mark.critical
 @pytest.mark.regression
 def testC22RefreshDuringFlightCheckoutRecoversSelectedItinerary(
@@ -375,14 +346,11 @@ def testC22RefreshDuringFlightCheckoutRecoversSelectedItinerary(
     flight_listing_page.filter_and_select()
     flight_trip_summary_page.proceed()
     FlightSeatMapPage(authenticated_page).handle_seats()
-
     authenticated_page.reload(wait_until="domcontentloaded")
-
     expect(authenticated_page).to_have_url(re.compile(r"/flights/travellerinfo/"))
     expect(
         authenticated_page.locator('input[name^="firstName"]').first
     ).to_be_visible(timeout=30_000)
-
 
 def _open_flight_checkout(
     home_page: HomePage,
@@ -397,7 +365,6 @@ def _open_flight_checkout(
     listing_page.filter_and_select()
     summary_page.proceed()
     seat_map_page.handle_seats()
-
 
 def _open_hotel_detail(
     home_page: HomePage,
@@ -422,7 +389,6 @@ def _open_hotel_detail(
         ) from error
     return listing_page.open_hotel_detail()
 
-
 def _open_hotel_guest_form(
     home_page: HomePage,
     search_page: HotelSearchPage,
@@ -437,7 +403,6 @@ def _open_hotel_guest_form(
         )
     return hotel_page
 
-
 def _booking_submit_button(page: Page):
     submit = page.get_by_role(
         "button",
@@ -448,7 +413,6 @@ def _booking_submit_button(page: Page):
     assert submit.count() > 0, "Booking form has no submit or continue action."
     return submit.last
 
-
 def _expect_validation_feedback(page: Page, field_selector: str) -> None:
     invalid_fields = page.locator(
         f":is({field_selector}):invalid, "
@@ -457,7 +421,6 @@ def _expect_validation_feedback(page: Page, field_selector: str) -> None:
     if invalid_fields.count() > 0:
         expect(invalid_fields.first).to_be_visible()
         return
-
     validation_message = page.get_by_text(
         re.compile(
             r"required|invalid|enter a valid|please provide|must be",
@@ -465,7 +428,6 @@ def _expect_validation_feedback(page: Page, field_selector: str) -> None:
         )
     )
     expect(validation_message.first).to_be_visible()
-
 
 def _set_price_filter_to_extreme(page: Page) -> None:
     slider = page.get_by_role("slider").first
@@ -475,12 +437,10 @@ def _set_price_filter_to_extreme(page: Page) -> None:
     assert maximum_price is not None, "Price filter does not expose its maximum value."
     expect(slider).to_have_attribute("aria-valuenow", maximum_price)
 
-
 def _flight_result_count(page: Page) -> int:
     match = re.search(r"(\d+)\s+results found", page.locator("body").inner_text())
     assert match is not None, "Flight listing does not show its result count."
     return int(match.group(1))
-
 
 def _expect_filtered_flights_and_reset(
     page: Page, initial_count: int, *, allow_empty: bool = False
@@ -497,7 +457,6 @@ def _expect_filtered_flights_and_reset(
     assert filtered_count < initial_count
     if not allow_empty:
         assert filtered_count > 0
-
     clear_all = page.get_by_text("Clear all", exact=True)
     expect(clear_all).to_be_visible()
     clear_all.click()
@@ -510,7 +469,6 @@ def _expect_filtered_flights_and_reset(
         timeout=30_000,
     )
     expect(page.locator("div.flex > section.flex > div.flex").first).to_be_visible()
-
 
 def _required_email(settings: Settings) -> str:
     if not settings.user_email:

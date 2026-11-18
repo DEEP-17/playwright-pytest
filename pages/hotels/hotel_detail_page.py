@@ -1,9 +1,6 @@
 import re
-
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
 from pages.base.base_page import BasePage
-
 
 class HotelDetailPage(BasePage):
     def has_book_now_button(self) -> bool:
@@ -13,7 +10,7 @@ class HotelDetailPage(BasePage):
         except PlaywrightTimeoutError:
             return False
         return True
-
+    
     def is_sold_out(self) -> bool:
         return self.page.get_by_text(
             re.compile(r"We are sold out!|Sorry we are sold out!", re.IGNORECASE)

@@ -1,10 +1,7 @@
 import re
-
 from playwright.sync_api import Locator, Page, expect
-
 from data.objects import HotelData
 from pages.base.base_page import BasePage
-
 
 class HotelSearchPage(BasePage):
     def search(
@@ -26,14 +23,12 @@ class HotelSearchPage(BasePage):
         self.page.locator("div").filter(
             has_text=re.compile(rf"^{re.escape(data.location_option)}$")
         ).first.click()
-
         self.page.get_by_role("button", name="showing selected date").click()
         check_in = data.check_in_days_from_today
         stay_length = data.stay_length_days
         self.select_calendar_date(check_in)
         self.select_calendar_date(check_in + stay_length)
         self.page.keyboard.press("Escape")
-
         guest_control = self.page.get_by_role(
             "button", name=re.compile(r"\d+ Room")
         )
@@ -50,6 +45,5 @@ class HotelSearchPage(BasePage):
         )
         expect(guest_control).to_contain_text(expected_summary)
         guest_control.click()
-
         self.page.get_by_role("button", name="Search").click()
         self.save_current_state("hotel-search-submitted-state.json")

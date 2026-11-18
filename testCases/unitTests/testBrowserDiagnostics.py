@@ -1,12 +1,10 @@
 import pytest
 from playwright.sync_api import Browser
-
 from hooks.browser_diagnostics import (
     BROWSER_DIAGNOSTICS,
     _safe_message,
     attach_browser_diagnostics,
 )
-
 
 def testDiagnosticsRedactCredentialsAndQueryStrings(
     monkeypatch: pytest.MonkeyPatch,
@@ -18,11 +16,9 @@ def testDiagnosticsRedactCredentialsAndQueryStrings(
         "login qa@example.test password=test-password "
         "https://user:pass@example.test/path?token=private"
     )
-
     assert "qa@example.test" not in message
     assert "test-password" not in message
     assert "token=private" not in message
-
 
 def testUiClickFillAndSelectionAreLogged(
     browser: Browser, request: pytest.FixtureRequest
@@ -53,7 +49,6 @@ def testUiClickFillAndSelectionAreLogged(
         page.get_by_role("button", name="Search").click()
     finally:
         page.close()
-
     diagnostics = request.node.stash[BROWSER_DIAGNOSTICS]
     assert any(
         "[ui] Filled textbox 'Departing from?'" in event
@@ -68,7 +63,6 @@ def testUiClickFillAndSelectionAreLogged(
         for event in diagnostics
     )
     assert all("[request]" not in event and "[response]" not in event for event in diagnostics)
-
 
 def testAutoUpgradedMixedContentWarningIsNotLogged(
     browser: Browser, request: pytest.FixtureRequest
@@ -88,7 +82,6 @@ def testAutoUpgradedMixedContentWarningIsNotLogged(
         )
     finally:
         page.close()
-
     diagnostics = request.node.stash[BROWSER_DIAGNOSTICS]
     assert not any("Mixed Content:" in event for event in diagnostics)
     assert any("An unrelated browser warning." in event for event in diagnostics)

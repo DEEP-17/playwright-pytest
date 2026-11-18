@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 @dataclass(frozen=True)
 class PassengerData:
     first_name: str
@@ -8,14 +7,12 @@ class PassengerData:
     last_name: str
     date_of_birth: str
 
-
 @dataclass(frozen=True)
 class ContactData:
     address: str
     zip_code: str
     city: str
     phone: str
-
 
 @dataclass(frozen=True)
 class FlightData:
@@ -27,13 +24,11 @@ class FlightData:
     passenger: PassengerData
     contact: ContactData
 
-
 @dataclass(frozen=True)
 class HotelGuestData:
     first_name: str
     last_name: str
     age: str
-
 
 @dataclass(frozen=True)
 class HotelData:
@@ -44,7 +39,6 @@ class HotelData:
     guest: HotelGuestData
     contact: ContactData
 
-
 @dataclass(frozen=True)
 class TripData:
     origin_query: str
@@ -53,7 +47,6 @@ class TripData:
     destination_option: str
     start_days_from_today: int
     trip_length_days: int
-
 
 @dataclass(frozen=True)
 class TestData:

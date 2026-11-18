@@ -1,13 +1,10 @@
 from data.objects import FlightData
-
 from pages.base.base_page import BasePage
-
 
 class FlightTravellerInfoPage(BasePage):
     def fill_info(self, data: FlightData, email: str) -> None:
         first_passenger = self.page.locator('input[name="firstName1"]')
         first_passenger.wait_for(state="visible")
-
         passenger_count = self.page.locator('input[name^="firstName"]').count()
         for index in range(1, passenger_count + 1):
             first_name = self.page.locator(f'input[name="firstName{index}"]')
@@ -26,7 +23,6 @@ class FlightTravellerInfoPage(BasePage):
             )
             self.page.get_by_role("combobox").nth(index * 2 - 1).click()
             self.page.get_by_role("option", name="Male", exact=True).click()
-
         contact = data.contact
         self.page.locator('input[name="adress"]').fill(contact.address)
         self.page.locator('input[name="zipcode"]').fill(contact.zip_code)

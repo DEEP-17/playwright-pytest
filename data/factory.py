@@ -1,7 +1,6 @@
 import copy
 import json
 from collections.abc import Mapping
-
 from data.objects import (
     ContactData,
     FlightData,
@@ -12,8 +11,6 @@ from data.objects import (
     TripData,
 )
 from utils.config import PROJECT_ROOT
-
-
 class TestDataFactory:
     @classmethod
     def create(
@@ -36,13 +33,11 @@ class TestDataFactory:
         merged = copy.deepcopy(dict(data))
         if overrides is not None:
             _merge_mapping(merged, overrides)
-
         flight = _mapping(merged, "flight")
         passenger = _mapping(flight, "passenger")
         hotel = _mapping(merged, "hotel")
         guest = _mapping(hotel, "guest")
         trip = _mapping(merged, "trip")
-
         return TestData(
             flight=FlightData(
                 origin_query=_string(flight, "fromSearch"),
@@ -83,8 +78,6 @@ class TestDataFactory:
                 trip_length_days=_integer(trip, "tripLengthDays"),
             ),
         )
-
-
 def _merge_mapping(
     destination: dict[str, object], overrides: Mapping[str, object]
 ) -> None:
@@ -95,13 +88,11 @@ def _merge_mapping(
         else:
             destination[key] = copy.deepcopy(value)
 
-
 def _mapping(data: Mapping[str, object], key: str) -> Mapping[str, object]:
     value = data.get(key)
     if not isinstance(value, Mapping):
         raise ValueError(f"Test data field '{key}' must be an object.")
     return value
-
 
 def _string(data: Mapping[str, object], key: str) -> str:
     value = data.get(key)
@@ -109,13 +100,11 @@ def _string(data: Mapping[str, object], key: str) -> str:
         raise ValueError(f"Test data field '{key}' must be a non-empty string.")
     return value
 
-
 def _integer(data: Mapping[str, object], key: str) -> int:
     value = data.get(key)
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"Test data field '{key}' must be an integer.")
     return value
-
 
 def _contact(data: Mapping[str, object]) -> ContactData:
     return ContactData(

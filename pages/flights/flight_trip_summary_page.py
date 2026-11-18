@@ -1,8 +1,6 @@
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
 from pages.base.base_page import BasePage
 from pages.flights.flight_listing_page import FlightListingPage
-
 
 class FlightTripSummaryPage(BasePage):
     def proceed(self) -> None:
@@ -45,7 +43,6 @@ class FlightTripSummaryPage(BasePage):
                     raise RuntimeError(
                         f"Continue to Checkout button did not load at {self.page.url}"
                     ) from error
-
         self.log_step("Continuing to checkout")
         continue_button.click()
         click_here_link = self.page.locator('u:has-text("Click here")')

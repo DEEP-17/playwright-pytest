@@ -1,9 +1,7 @@
 import re
 from decimal import Decimal
-
 import pytest
 from playwright.sync_api import Page, expect
-
 from data.objects import TestData
 from pages.common.home_page import HomePage
 from pages.flights.flight_listing_page import FlightListingPage
@@ -12,7 +10,6 @@ from pages.flights.flight_seat_map_page import FlightSeatMapPage
 from pages.flights.flight_traveller_info_page import FlightTravellerInfoPage
 from pages.flights.flight_trip_summary_page import FlightTripSummaryPage
 from utils.config import Settings
-
 
 @pytest.mark.smoke
 @pytest.mark.regression
@@ -41,7 +38,6 @@ def testE1FlightBookingFlow(
         pytest.fail("USER_EMAIL is required for the flight booking flow.")
     flight_traveller_info_page.fill_info(flight_data, settings.user_email)
 
-
 @pytest.mark.regression
 def testE5BusinessClassFlightSearch(
     authenticated_page: Page,
@@ -54,14 +50,12 @@ def testE5BusinessClassFlightSearch(
     flight_search_page.search_flight(
         test_data.flight, cabin_class="Business class"
     )
-
     assert flight_listing_page.wait_for_results(), (
         "Business-class flight search did not display results."
     )
     expect(
         authenticated_page.locator("div.flex > section.flex > div.flex").first
     ).to_be_visible()
-
 
 @pytest.mark.regression
 def testE6RoundTripSearchRespectsPassengerCountAndDates(
@@ -77,7 +71,6 @@ def testE6RoundTripSearchRespectsPassengerCountAndDates(
         trip_type="Round trip",
         passenger_counts=(2, 0, 0),
     )
-
     assert flight_listing_page.wait_for_results(), (
         "Round-trip flight search did not display results."
     )
@@ -91,7 +84,6 @@ def testE6RoundTripSearchRespectsPassengerCountAndDates(
         re.compile(r"/Round%20Trip/2/0/0/Economy/")
     )
 
-
 @pytest.mark.regression
 def testE7MultiCityFlightSearch(
     authenticated_page: Page,
@@ -102,7 +94,6 @@ def testE7MultiCityFlightSearch(
 ) -> None:
     home_page.navigate_to_flights()
     flight_search_page.search_multi_city(test_data.flight)
-
     assert flight_listing_page.wait_for_results(), (
         "Multi-city flight search did not display results."
     )
@@ -115,7 +106,6 @@ def testE7MultiCityFlightSearch(
     expect(authenticated_page.locator("body")).to_contain_text(
         "Toronto Pearson International Airport"
     )
-
 
 @pytest.mark.regression
 def testE8FlightFiltersAndArrivalSort(
@@ -130,7 +120,6 @@ def testE8FlightFiltersAndArrivalSort(
     assert flight_listing_page.wait_for_results(), (
         "Flight results did not load for the filter and sort scenario."
     )
-
     stop_filter = authenticated_page.get_by_text(
         re.compile(r"^2 Stops?$")
     ).first
@@ -139,7 +128,6 @@ def testE8FlightFiltersAndArrivalSort(
     expect(airline_filter).to_be_visible()
     stop_filter.click()
     airline_filter.click()
-
     price_slider = authenticated_page.get_by_role("slider").first
     expect(price_slider).to_be_visible()
     old_price_limit = price_slider.get_attribute("aria-valuenow")
@@ -152,7 +140,6 @@ def testE8FlightFiltersAndArrivalSort(
         arg=old_price_limit,
         timeout=5_000,
     )
-
     authenticated_page.get_by_role(
         "button", name=re.compile(r"Sort by\s*:\s*Price", re.IGNORECASE)
     ).click()
@@ -170,7 +157,6 @@ def testE8FlightFiltersAndArrivalSort(
         authenticated_page.locator("div.flex > section.flex > div.flex").first
     ).to_be_visible()
 
-
 @pytest.mark.regression
 def testE9SelectedFarePersistsToTripSummary(
     authenticated_page: Page,
@@ -184,14 +170,12 @@ def testE9SelectedFarePersistsToTripSummary(
     assert flight_listing_page.wait_for_results(), (
         "Flight results did not load for fare persistence validation."
     )
-
     first_result = authenticated_page.locator(
         "div.flex > section.flex > div.flex"
     ).first
     result_text = first_result.inner_text()
     fare = re.search(r"(?:₹|\$)\s?([\d,]+(?:\.\d{1,2})?)", result_text)
     assert fare is not None, "Selected flight result did not display a fare."
-
     first_result.click()
     authenticated_page.wait_for_url("**/flights/trip-summary/**", timeout=60_000)
     expect(

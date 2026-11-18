@@ -1,16 +1,13 @@
 import re
 from dataclasses import replace
-
 import pytest
 from playwright.sync_api import Page, expect
-
 from data.objects import TestData
 from pages.common.home_page import HomePage
 from pages.trips.trip_plan_page import TripPlanPage
 from pages.trips.trip_planner_page import TripPlannerPage
 from pages.trips.trip_saved_trips_page import TripSavedTripsPage
 from pages.trips.trip_search_page import TripSearchPage
-
 
 @pytest.mark.regression
 @pytest.mark.all
@@ -30,7 +27,6 @@ def testE12TripPlannerCreationFlow(
         timeout=30_000
     )
 
-
 @pytest.mark.regression
 def testE13SavedItineraryRemainsInSavedTrips(
     authenticated_page: Page,
@@ -43,7 +39,6 @@ def testE13SavedItineraryRemainsInSavedTrips(
     existing_trip_count = saved_trips_page.saved_trip_count()
     planner_tab = saved_trips_page.create_trip_planner()
     TripPlannerPage(planner_tab).dismiss_popup()
-
     fresh_trip = replace(
         test_data.trip,
         start_days_from_today=test_data.trip.start_days_from_today + 3,
@@ -52,12 +47,10 @@ def testE13SavedItineraryRemainsInSavedTrips(
     trip_plan_page = TripPlanPage(trip_plan_tab)
     trip_plan_page.save()
     trip_plan_page.save_current_state("trip-planned-state.json")
-
     saved_trips_tab.reload(wait_until="domcontentloaded")
     expect(
         saved_trips_tab.get_by_role("button", name="Delete")
     ).to_have_count(existing_trip_count + 1, timeout=30_000)
-
 
 @pytest.mark.regression
 def testE14DeleteOldTripCreateFreshTripAndVerifyAfterRefresh(
@@ -71,7 +64,6 @@ def testE14DeleteOldTripCreateFreshTripAndVerifyAfterRefresh(
     existing_trip_count = saved_trips_page.delete_first_trip()
     planner_tab = saved_trips_page.create_trip_planner()
     TripPlannerPage(planner_tab).dismiss_popup()
-
     fresh_trip = replace(
         test_data.trip,
         start_days_from_today=test_data.trip.start_days_from_today + 10,
@@ -79,7 +71,6 @@ def testE14DeleteOldTripCreateFreshTripAndVerifyAfterRefresh(
     trip_plan_tab = TripSearchPage(planner_tab).search_and_plan(fresh_trip)
     trip_plan_page = TripPlanPage(trip_plan_tab)
     trip_plan_page.save()
-
     saved_trips_tab.reload(wait_until="domcontentloaded")
     expect(
         saved_trips_tab.get_by_role("button", name="Delete")

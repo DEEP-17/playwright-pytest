@@ -1,9 +1,6 @@
 import re
-
 from playwright.sync_api import Page, expect
-
 from pages.base.base_page import BasePage
-
 
 class LoginPage(BasePage):
     def login(self, email: str, password: str) -> None:

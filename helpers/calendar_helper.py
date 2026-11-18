@@ -1,11 +1,8 @@
 import calendar
 import re
 from datetime import date, datetime, time, timedelta
-
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
-
 MONTHS = tuple(calendar.month_name[1:])
-
 
 def ordinal(day: int) -> str:
     if 11 <= day % 100 <= 13:
@@ -14,19 +11,16 @@ def ordinal(day: int) -> str:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return f"{day}{suffix}"
 
-
 def days_from_today(days: int, today: date | None = None) -> datetime:
     base_date = today or date.today()
     target = base_date + timedelta(days=days)
     return datetime.combine(target, time(hour=12))
-
 
 def calendar_date_label(target: date | datetime) -> str:
     return (
         f"{target.strftime('%A')}, {MONTHS[target.month - 1]} "
         f"{ordinal(target.day)}, {target.year}"
     )
-
 
 def select_date_in_open_calendar(
     page: Page, target_date: date | datetime, maximum_month_changes: int = 24
@@ -36,7 +30,6 @@ def select_date_in_open_calendar(
     date_name = re.compile(
         rf"^{re.escape(label_without_year)}(?: {target_date.year})?$"
     )
-
     for attempt in range(maximum_month_changes + 1):
         date_buttons = page.get_by_role("button", name=date_name)
         for index in range(date_buttons.count()):
@@ -44,10 +37,8 @@ def select_date_in_open_calendar(
             if date_button.is_visible() and date_button.is_enabled():
                 date_button.click()
                 return
-
         if attempt == maximum_month_changes:
             break
-
         navigation_name = (
             "Go to the Next Month"
             if (
@@ -63,7 +54,6 @@ def select_date_in_open_calendar(
                 f"Could not find {full_label} or the calendar navigation button."
             ) from error
         navigation_button.click()
-
     raise RuntimeError(
         f"Could not select {full_label} after {maximum_month_changes} month changes."
     )

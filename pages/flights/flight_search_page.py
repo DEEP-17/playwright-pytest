@@ -1,11 +1,8 @@
 import re
 from typing import Literal
-
 from playwright.sync_api import Locator, Page, expect
-
 from data.objects import FlightData
 from pages.base.base_page import BasePage
-
 
 class FlightSearchPage(BasePage):
     def search_flight(
@@ -19,21 +16,18 @@ class FlightSearchPage(BasePage):
         self.log_step("Starting flight search")
         expect(self.page).to_have_url(re.compile(r".*flights/search"))
         self.page.get_by_role("tab", name=trip_type).click()
-
         self.log_step("Selecting departure airport")
         self._select_airport(
             self.page.get_by_role("textbox", name="Departing from?"),
             data.origin_query,
             data.origin_option,
         )
-
         self.log_step("Selecting destination airport")
         self._select_airport(
             self.page.get_by_role("textbox", name="Going to?"),
             data.destination_query,
             data.destination_option,
         )
-
         self.log_step("Selecting departure date")
         if trip_type == "One way":
             self.page.locator("#date").click()
@@ -45,17 +39,14 @@ class FlightSearchPage(BasePage):
         if trip_type == "Round trip":
             self.select_calendar_date(data.departure_days_from_today + 2)
             self.page.keyboard.press("Escape")
-
         self.log_step(f"Selecting {cabin_class} cabin")
         self.page.get_by_role("button", name="Economy", exact=True).click()
         self.page.get_by_role("menuitem", name=cabin_class, exact=True).click()
         expect(
             self.page.get_by_role("button", name=cabin_class, exact=True)
         ).to_be_visible()
-
         if passenger_counts is not None:
             self.set_passenger_counts(*passenger_counts)
-
         self.log_step("Submitting flight search")
         self.page.get_by_role("button", name="Search").click()
         self.save_current_state("flight-search-submitted-state.json")
@@ -65,7 +56,6 @@ class FlightSearchPage(BasePage):
         self.log_step("Starting multi-city flight search")
         expect(self.page).to_have_url(re.compile(r".*flights/search"))
         self.page.get_by_role("tab", name="Multi city").click()
-
         panel = self.page.get_by_role("tabpanel", name="Multi city")
         origin_fields = panel.get_by_role("textbox", name="Departing from?")
         destination_fields = panel.get_by_role("textbox", name="Going to?")
@@ -78,7 +68,6 @@ class FlightSearchPage(BasePage):
             data.destination_option,
         )
         self._select_multi_city_date(panel, 0, data.departure_days_from_today)
-
         panel.get_by_role("button", name="+ Add another flight").click()
         expect(origin_fields.nth(1)).to_have_value(
             re.compile(r"(Toronto.*YYZ|YYZ.*Toronto)", re.IGNORECASE)
@@ -87,7 +76,6 @@ class FlightSearchPage(BasePage):
             destination_fields.nth(1), data.origin_query, data.origin_option
         )
         self._select_multi_city_date(panel, 1, data.departure_days_from_today + 2)
-
         expect(origin_fields).to_have_count(2)
         expect(destination_fields).to_have_count(2)
         panel.get_by_role("button", name="Search").click()
@@ -98,7 +86,6 @@ class FlightSearchPage(BasePage):
     ) -> None:
         if adults < 1 or children < 0 or infants < 0:
             raise ValueError("Flight searches require at least one adult.")
-
         self.page.get_by_role("button", name=re.compile(r"\d+ Passenger")).click()
         for passenger_type, expected_count in (
             ("adults", adults),
@@ -124,7 +111,6 @@ class FlightSearchPage(BasePage):
                         f"Could not set the {passenger_type} passenger count."
                     )
                 current_count = updated_count
-
         total_passengers = adults + children + infants
         expect(
             self.page.get_by_role(

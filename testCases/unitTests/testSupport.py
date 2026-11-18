@@ -17,7 +17,6 @@ def testSettingsAreReadFromEnvironmentValues() -> None:
     assert settings.user_email == "test@example.test"
     assert settings.user_password == "test-password"
 
-
 def testTestDataContainsAllEndToEndScenarios() -> None:
     test_data = load_test_data()
     assert isinstance(test_data, TestData)
@@ -25,13 +24,11 @@ def testTestDataContainsAllEndToEndScenarios() -> None:
     assert test_data.hotel.location_query
     assert test_data.trip.origin_query
 
-
 def testSharedPytestFixturesAreRegistered(
     settings: Settings, test_data: TestData
 ) -> None:
     assert isinstance(settings, Settings)
     assert isinstance(test_data, TestData)
-
 
 def testDataFactoryAppliesNestedOverridesWithoutMutatingSource() -> None:
     source = {
@@ -81,6 +78,5 @@ def testDataFactoryAppliesNestedOverridesWithoutMutatingSource() -> None:
         source,
         overrides={"flight": {"passenger": {"firstName": "Override"}}},
     )
-
     assert result.flight.passenger.first_name == "Override"
     assert source["flight"]["passenger"]["firstName"] == "Test"

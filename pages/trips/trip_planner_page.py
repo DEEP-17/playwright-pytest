@@ -1,7 +1,5 @@
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
-
 from pages.base.base_page import BasePage
-
 
 class TripPlannerPage(BasePage):
     def dismiss_popup(self) -> None:
@@ -14,7 +12,6 @@ class TripPlannerPage(BasePage):
             )
             self.save_current_state("trip-planner-search-state.json")
             return
-
         popup_image.wait_for(state="visible", timeout=15_000)
         popup_image.click(force=True)
         try:

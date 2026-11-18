@@ -3,13 +3,10 @@ import re
 import warnings
 from collections.abc import Generator
 from pathlib import Path
-
 import pytest
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
-
 from hooks.browser_diagnostics import BROWSER_DIAGNOSTICS
-
 
 def _skip_reason(node_id: str, selectors: list[str]) -> str | None:
     matching = []
@@ -26,7 +23,6 @@ def _skip_reason(node_id: str, selectors: list[str]) -> str | None:
         return None
     return "Skipped by --skip-case: " + ", ".join(matching)
 
-
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--skip-case",
@@ -38,7 +34,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "may be repeated or comma-separated."
         ),
     )
-
 
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
@@ -54,7 +49,6 @@ def pytest_collection_modifyitems(
         if reason:
             item.add_marker(pytest.mark.skip(reason=reason))
 
-
 def _prepare_output_directories(config: pytest.Config) -> None:
     (Path(config.rootpath) / "test-results").mkdir(parents=True, exist_ok=True)
     (Path(config.rootpath) / ".auth").mkdir(parents=True, exist_ok=True)
@@ -65,14 +59,11 @@ def _prepare_output_directories(config: pytest.Config) -> None:
             report_path = Path(config.invocation_params.dir) / report_path
         report_path.parent.mkdir(parents=True, exist_ok=True)
 
-
 def pytest_sessionstart(session: pytest.Session) -> None:
     _prepare_output_directories(session.config)
 
-
 def pytest_runtest_setup(item: pytest.Item) -> None:
     _prepare_output_directories(item.config)
-
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(
@@ -88,11 +79,9 @@ def pytest_runtest_makereport(
             )
     if report.when != "call" or not report.failed:
         return
-
     page = item.funcargs.get("page")
     if not isinstance(page, Page) or page.is_closed():
         return
-
     safe_node_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", item.nodeid).strip("_")
     screenshot_path = item.config.rootpath / "test-results" / "screenshots"
     screenshot_path.mkdir(parents=True, exist_ok=True)

@@ -2,17 +2,13 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
 from playwright.sync_api import BrowserContext
-
 from utils.config import PROJECT_ROOT
-
 
 @dataclass(frozen=True)
 class BrowserStateFiles:
     storage_state: Path
     session_storage: Path
-
 
 def state_files(
     file_name: str, directory: Path | None = None
@@ -27,13 +23,11 @@ def state_files(
     )
     return BrowserStateFiles(storage_state, session_storage)
 
-
 def save_browser_state(
     context: BrowserContext, file_name: str, directory: Path | None = None
 ) -> BrowserStateFiles:
     files = state_files(file_name, directory)
     context.storage_state(path=str(files.storage_state), indexed_db=True)
-
     session_storage: dict[str, dict[str, str]] = {}
     for page in context.pages:
         if page.is_closed() or not page.url.startswith(("http://", "https://")):
@@ -47,12 +41,10 @@ def save_browser_state(
         )
         if isinstance(origin, str) and isinstance(values, dict):
             session_storage[origin] = values
-
     files.session_storage.write_text(
         json.dumps(session_storage, indent=2), encoding="utf-8"
     )
     return files
-
 
 def restore_session_storage(context: BrowserContext, session_storage_file: Path) -> None:
     with session_storage_file.open(encoding="utf-8") as session_file:
@@ -73,11 +65,9 @@ def restore_session_storage(context: BrowserContext, session_storage_file: Path)
         raise ValueError(
             f"Session storage contains invalid origin data: {session_storage_file}"
         )
-
     context.add_init_script(
         script=_session_storage_restore_script(session_storage)
     )
-
 
 def _session_storage_restore_script(
     session_origins: dict[str, object]

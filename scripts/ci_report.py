@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import argparse
 import html
 import sys
@@ -7,14 +6,12 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
-
 _CATEGORY_LABELS = {
     "flight-scenarios": "Flights",
     "hotel-scenarios": "Hotels",
     "public-attractions": "Attractions",
     "saved-trip": "Saved trips",
 }
-
 
 @dataclass(frozen=True)
 class TestResult:
@@ -24,14 +21,12 @@ class TestResult:
     duration: float
     detail: str = ""
 
-
 def _category_for_report(report_path: Path) -> str:
     for parent in report_path.parents:
         if parent.name.startswith("pytest-report-"):
             category_id = parent.name.removeprefix("pytest-report-")
             return _CATEGORY_LABELS.get(category_id, category_id.replace("-", " "))
     return "Uncategorized"
-
 
 def read_test_results(reports_dir: Path) -> list[TestResult]:
     results: list[TestResult] = []
@@ -73,7 +68,6 @@ def read_test_results(reports_dir: Path) -> list[TestResult]:
             )
     return sorted(results, key=lambda result: (result.category, result.node_id))
 
-
 def validation_errors(
     results: list[TestResult], expected_count: int
 ) -> list[str]:
@@ -82,12 +76,10 @@ def validation_errors(
         errors.append(
             f"Expected {expected_count} workbook test results; found {len(results)}."
         )
-
     node_ids = [result.node_id for result in results]
     duplicates = sorted({node_id for node_id in node_ids if node_ids.count(node_id) > 1})
     if duplicates:
         errors.append("Duplicate test results: " + ", ".join(duplicates))
-
     not_passed = [
         f"{result.node_id} ({result.status})"
         for result in results
@@ -96,7 +88,6 @@ def validation_errors(
     if not_passed:
         errors.append("Workbook tests did not pass: " + ", ".join(not_passed))
     return errors
-
 
 def render_html(results: list[TestResult], expected_count: int) -> str:
     passed = sum(result.status == "PASSED" for result in results)
@@ -147,7 +138,6 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
 </html>
 """
 
-
 def render_markdown(results: list[TestResult], expected_count: int) -> str:
     passed = sum(result.status == "PASSED" for result in results)
     lines = [
@@ -165,7 +155,6 @@ def render_markdown(results: list[TestResult], expected_count: int) -> str:
         lines.extend(("", f"Collected {len(results)} of {expected_count} expected results."))
     return "\n".join(lines) + "\n"
 
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build the combined CI test report.")
     parser.add_argument("--reports-dir", type=Path, required=True)
@@ -173,7 +162,6 @@ def main() -> int:
     parser.add_argument("--markdown", type=Path, required=True)
     parser.add_argument("--expected-count", type=int, default=23)
     args = parser.parse_args()
-
     results = read_test_results(args.reports_dir)
     args.html.parent.mkdir(parents=True, exist_ok=True)
     args.html.write_text(
@@ -183,14 +171,12 @@ def main() -> int:
     args.markdown.write_text(
         render_markdown(results, args.expected_count), encoding="utf-8"
     )
-
     errors = validation_errors(results, args.expected_count)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
     print(f"Validated all {args.expected_count} workbook test results.")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

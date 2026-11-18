@@ -1,8 +1,6 @@
 import re
-
 import pytest
 from playwright.sync_api import Page, expect
-
 from data.objects import TestData
 from pages.common.home_page import HomePage
 from pages.hotels.hotel_detail_page import HotelDetailPage
@@ -10,7 +8,6 @@ from pages.hotels.hotel_guest_info_page import HotelGuestInfoPage
 from pages.hotels.hotel_listing_page import HotelListingPage
 from pages.hotels.hotel_search_page import HotelSearchPage
 from utils.config import Settings
-
 
 @pytest.mark.smoke
 @pytest.mark.regression
@@ -28,7 +25,6 @@ def testE2HotelBookingFlow(
     hotel_data = test_data.hotel
     hotel_search_page.search(hotel_data)
     hotel_search_page.save_current_state("hotel-searched-state.json")
-
     hotel_page = hotel_listing_page.open_hotel_detail()
     hotel_detail_page = HotelDetailPage(hotel_page)
     if hotel_detail_page.click_book_now():
@@ -37,7 +33,6 @@ def testE2HotelBookingFlow(
         HotelGuestInfoPage(hotel_page).fill_info(
             hotel_data, settings.user_email
         )
-
 
 @pytest.mark.regression
 def testE10HotelRoomAndGuestCountArePreserved(

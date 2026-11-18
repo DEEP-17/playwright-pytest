@@ -1,9 +1,6 @@
 from datetime import date
-
 import pytest
-
 from helpers.calendar_helper import calendar_date_label, days_from_today, ordinal
-
 
 @pytest.mark.all
 @pytest.mark.parametrize(
@@ -13,10 +10,8 @@ from helpers.calendar_helper import calendar_date_label, days_from_today, ordina
 def testOrdinal(day: int, expected: str) -> None:
     assert ordinal(day) == expected
 
-
 @pytest.mark.all
 def testDaysFromTodayAndCalendarLabel() -> None:
     target = days_from_today(1, date(2026, 10, 26))
-
     assert (target.year, target.month, target.day, target.hour) == (2026, 10, 27, 12)
     assert calendar_date_label(target) == "Tuesday, October 27th, 2026"

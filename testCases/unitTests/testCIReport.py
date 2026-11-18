@@ -1,11 +1,9 @@
 from pathlib import Path
-
 from scripts.ci_report import (
     read_test_results,
     render_html,
     validation_errors,
 )
-
 
 def testCiReportReadsAndGroupsJunitResults(tmp_path: Path) -> None:
     report_dir = tmp_path / "pytest-report-flight-scenarios"
@@ -19,9 +17,7 @@ def testCiReportReadsAndGroupsJunitResults(tmp_path: Path) -> None:
 </testsuite></testsuites>""",
         encoding="utf-8",
     )
-
     results = read_test_results(tmp_path)
-
     assert [result.category for result in results] == ["Flights", "Flights"]
     assert [result.status for result in results] == ["FAILED", "PASSED"]
     assert "Expected 23 workbook test results; found 2." in validation_errors(
@@ -30,7 +26,6 @@ def testCiReportReadsAndGroupsJunitResults(tmp_path: Path) -> None:
     report = render_html(results, expected_count=23)
     assert "Workbook UI test results" in report
     assert "&lt;unexpected&gt;" in report
-
 
 def testCiReportFlagsSkippedAndDuplicateResults(tmp_path: Path) -> None:
     report_dir = tmp_path / "pytest-report-hotel-scenarios"
@@ -44,13 +39,10 @@ def testCiReportFlagsSkippedAndDuplicateResults(tmp_path: Path) -> None:
 </testsuite>""",
         encoding="utf-8",
     )
-
     results = read_test_results(tmp_path)
     errors = validation_errors(results, expected_count=2)
-
     assert any("Duplicate test results" in error for error in errors)
     assert any("SKIPPED" in error for error in errors)
-
 
 def testCiReportAcceptsExact23CaseLaneBreakdown(tmp_path: Path) -> None:
     lane_counts = {
@@ -69,9 +61,7 @@ def testCiReportAcceptsExact23CaseLaneBreakdown(tmp_path: Path) -> None:
         (report_dir / f"junit-{lane}.xml").write_text(
             f"<testsuite>{cases}</testsuite>", encoding="utf-8"
         )
-
     results = read_test_results(tmp_path)
-
     assert len(results) == 23
     assert validation_errors(results, expected_count=23) == []
     assert render_html(results, expected_count=23).count("<tr>") == 24
