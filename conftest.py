@@ -1,1 +1,1 @@
-pytest_plugins = ("fixtures.app_fixtures", "hooks.pytest_hooks")
+pytest_plugins = ("pytestFixtures.appFixtures", "pytestHooks.pytestHooks")

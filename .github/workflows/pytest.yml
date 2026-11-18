@@ -11,6 +11,11 @@ jobs:
   impact-analysis:
     name: Pull request impact analysis
     if: ${{ github.event_name == 'pull_request' }}
+    outputs:
+      flightTests: ${{ steps.analyze.outputs.flightTests }}
+      hotelTests: ${{ steps.analyze.outputs.hotelTests }}
+      attractionsTests: ${{ steps.analyze.outputs.attractionsTests }}
+      savedTripTests: ${{ steps.analyze.outputs.savedTripTests }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,19 +27,21 @@ jobs:
         with:
           python-version: "3.12"
       - name: Analyze changed files
+        id: analyze
         run: >-
-          python scripts/impactAnalysis.py
+          python automationScripts/impactAnalysis.py
           --base "${{ github.event.pull_request.base.sha }}"
           --head "${{ github.sha }}"
-          --markdown test-results/impact-analysis.md
-          --json test-results/impact-analysis.json
+          --markdown testResults/impact-analysis.md
+          --json testResults/impact-analysis.json
+          --github-output "$GITHUB_OUTPUT"
       - name: Publish impact analysis to the PR summary
-        run: cat test-results/impact-analysis.md >> "$GITHUB_STEP_SUMMARY"
+        run: cat testResults/impact-analysis.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload impact analysis
         uses: actions/upload-artifact@v4
         with:
           name: pull-request-impact-analysis
-          path: test-results/impact-analysis.*
+          path: testResults/impact-analysis.*
           if-no-files-found: error
           retention-days: 14
 
@@ -43,19 +50,19 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-playwright
+      - uses: ./.github/customActions/setupPlaywright
       - name: Ensure report directory exists
         shell: pwsh
-        run: New-Item -ItemType Directory -Force "test-results" | Out-Null
+        run: New-Item -ItemType Directory -Force "testResults" | Out-Null
       - name: Run unit and browser session tests
         run: >-
           .\.venv\Scripts\python.exe -m pytest -vv -s
           --log-cli-level=DEBUG
-          --log-file=test-results/pytest.log
+          --log-file=testResults/pytest.log
           --log-file-level=DEBUG
           testCases/unitTests/testCalendarHelper.py
           testCases/unitTests/testSupport.py
-          testCases/unitTests/testCIReport.py
+          testCases/unitTests/testCiReport.py
           testCases/unitTests/testSessionState.py
           testCases/unitTests/testBrowserDiagnostics.py
           testCases/unitTests/testSkipCases.py
@@ -67,22 +74,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-report-preflight
-          path: test-results/
+          path: testResults/
           if-no-files-found: warn
           retention-days: 14
 
   flight-tests:
     name: Flight test cases
     runs-on: windows-latest
-    needs: preflight-tests
-    if: ${{ !cancelled() }}
+    needs: [preflight-tests, impact-analysis]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.impact-analysis.result != 'success' || needs.impact-analysis.outputs.flightTests == 'true') }}
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/run-ui-tests
+      - uses: ./.github/customActions/runUiTests
         with:
           case-name: Flight scenarios
           case-id: flight-scenarios
-          test-paths: testCases/e2eTests/testFlight.py testCases/e2eTests/testCriticalFlows.py
+          test-paths: testCases/endToEndTests/testFlight.py testCases/endToEndTests/testCriticalFlows.py
           test-filter: testE1 or testE5 or testE6 or testE7 or testE8 or testE9 or c5 or c6 or (c7 and flight) or c13 or c15 or c21 or c22
           authenticated: "true"
           base-url: ${{ secrets.BASE_URL }}
@@ -92,15 +99,15 @@ jobs:
   hotel-tests:
     name: Hotel test cases
     runs-on: windows-latest
-    needs: preflight-tests
-    if: ${{ !cancelled() }}
+    needs: [preflight-tests, impact-analysis]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.impact-analysis.result != 'success' || needs.impact-analysis.outputs.hotelTests == 'true') }}
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/run-ui-tests
+      - uses: ./.github/customActions/runUiTests
         with:
           case-name: Hotel scenarios
           case-id: hotel-scenarios
-          test-paths: testCases/e2eTests/testHotel.py testCases/e2eTests/testCriticalFlows.py
+          test-paths: testCases/endToEndTests/testHotel.py testCases/endToEndTests/testCriticalFlows.py
           test-filter: testE2 or testE10 or (c7 and hotel) or c8 or c9
           authenticated: "true"
           base-url: ${{ secrets.BASE_URL }}
@@ -110,15 +117,15 @@ jobs:
   attractions-tests:
     name: Attractions test cases
     runs-on: windows-latest
-    needs: preflight-tests
-    if: ${{ !cancelled() }}
+    needs: [preflight-tests, impact-analysis]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.impact-analysis.result != 'success' || needs.impact-analysis.outputs.attractionsTests == 'true') }}
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/run-ui-tests
+      - uses: ./.github/customActions/runUiTests
         with:
           case-name: Public attractions validation
           case-id: public-attractions
-          test-paths: testCases/e2eTests/testCriticalFlows.py
+          test-paths: testCases/endToEndTests/testCriticalFlows.py
           test-filter: testE4 or c10
           authenticated: "false"
           base-url: ${{ secrets.BASE_URL }}
@@ -127,14 +134,14 @@ jobs:
     name: Saved-trip scenarios E12-E14
     runs-on: windows-latest
     environment: QA
-    needs: [flight-tests, hotel-tests, attractions-tests]
-    if: ${{ !cancelled() }}
+    needs: [flight-tests, hotel-tests, attractions-tests, impact-analysis]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.impact-analysis.result != 'success' || needs.impact-analysis.outputs.savedTripTests == 'true') }}
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-playwright
+      - uses: ./.github/customActions/setupPlaywright
       - name: Ensure report directory exists
         shell: pwsh
-        run: New-Item -ItemType Directory -Force "test-results" | Out-Null
+        run: New-Item -ItemType Directory -Force "testResults" | Out-Null
       - name: Validate required test configuration
         shell: pwsh
         env:
@@ -164,23 +171,23 @@ jobs:
         run: >-
           .\.venv\Scripts\python.exe -m pytest -vv -s
           --log-cli-level=DEBUG
-          --log-file=test-results/pytest.log
+          --log-file=testResults/pytest.log
           --log-file-level=DEBUG
-          --junitxml=test-results/junit-saved-trip.xml
-          testCases/e2eTests/testTrip.py
+          --junitxml=testResults/junit-saved-trip.xml
+          testCases/endToEndTests/testTrip.py
       - name: Verify authenticated session-state files
         if: always()
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force "test-results" | Out-Null
-          $storageState = Test-Path ".auth\authenticated-state.json"
-          $sessionStorage = Test-Path ".auth\authenticated-state.session-storage.json"
+          New-Item -ItemType Directory -Force "testResults" | Out-Null
+          $storageState = Test-Path ".authenticationState\authenticated-state.json"
+          $sessionStorage = Test-Path ".authenticationState\authenticated-state.session-storage.json"
           [ordered]@{
             job = "saved-trip-tests"
             pytestOutcome = "${{ steps.run-tests.outcome }}"
             storageStateCreated = $storageState
             sessionStorageCreated = $sessionStorage
-          } | ConvertTo-Json | Set-Content "test-results\session-state-evidence.json"
+          } | ConvertTo-Json | Set-Content "testResults\session-state-evidence.json"
           if (
             "${{ steps.run-tests.outcome }}" -eq "success" -and
             (-not $storageState -or -not $sessionStorage)
@@ -192,11 +199,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-report-saved-trip
-          path: test-results/
+          path: testResults/
           if-no-files-found: warn
           retention-days: 14
 
-  test-reports:
+  testReports:
     name: Collect CI test reports
     runs-on: windows-latest
     if: always()
@@ -217,17 +224,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: pytest-report-*
-          path: test-reports
+          path: testReports
       - name: Aggregate Allure results
         id: aggregate-allure
         if: always()
         shell: pwsh
         run: |
-          $target = Join-Path (Get-Location) "test-reports\allure-results"
+          $target = Join-Path (Get-Location) "testReports\allureResults"
           New-Item -ItemType Directory -Force $target | Out-Null
-          $sourceFiles = Get-ChildItem "test-reports" -Recurse -File |
+          $sourceFiles = Get-ChildItem "testReports" -Recurse -File |
             Where-Object {
-              $_.Directory.Name -eq "allure-results" -and
+              $_.Directory.Name -eq "allureResults" -and
               $_.Directory.FullName -ne $target
             }
           foreach ($file in $sourceFiles) {
@@ -264,14 +271,14 @@ jobs:
         shell: pwsh
         run: |
           & "$env:RUNNER_TEMP\allure-cli\allure-2.35.1\bin\allure.bat" generate `
-            "test-reports\allure-results" `
+            "testReports\allureResults" `
             --clean `
-            -o "test-reports\allure-report"
-          Copy-Item scripts\openAllureReport.py test-reports\allure-report\openAllureReport.py
-          Copy-Item scripts\openAllureReport.bat test-reports\allure-report\OPEN_REPORT.bat
-          Copy-Item scripts\allureReportInstructions.txt test-reports\allure-report\OPEN_REPORT.txt
-          $reportIndex = Join-Path (Get-Location) "test-reports\allure-report\index.html"
-          $summaryPath = Join-Path (Get-Location) "test-reports\allure-report\widgets\summary.json"
+            -o "testReports\allureReport"
+          Copy-Item automationScripts\openAllureReport.py testReports\allureReport\openAllureReport.py
+          Copy-Item automationScripts\openAllureReport.bat testReports\allureReport\OPEN_REPORT.bat
+          Copy-Item automationScripts\allureReportInstructions.txt testReports\allureReport\OPEN_REPORT.txt
+          $reportIndex = Join-Path (Get-Location) "testReports\allureReport\index.html"
+          $summaryPath = Join-Path (Get-Location) "testReports\allureReport\widgets\summary.json"
           if (-not (Test-Path $reportIndex) -or -not (Test-Path $summaryPath)) {
             throw "Allure report generation did not produce index.html and widgets/summary.json."
           }
@@ -284,22 +291,29 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
-          path: test-reports/allure-report/
+          path: testReports/allureReport/
           if-no-files-found: error
           retention-days: 14
-      - name: Build and validate the 23-case report
+      - name: Build and validate the CI test summary
         if: always()
-        run: >-
-          python scripts\ci_report.py
-          --reports-dir test-reports
-          --html test-reports\23-test-summary.html
-          --markdown test-reports\23-test-summary.md
-          --expected-count 23
+        shell: pwsh
+        run: |
+          $arguments = @(
+            "automationScripts\ciReport.py",
+            "--reports-dir", "testReports",
+            "--html", "testReports\23-test-summary.html",
+            "--markdown", "testReports\23-test-summary.md",
+            "--expected-count", "23"
+          )
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $arguments += "--allow-partial"
+          }
+          python @arguments
       - name: Publish workbook results to the workflow summary
         if: always()
         shell: pwsh
         run: |
-          $summaryPath = "test-reports\23-test-summary.md"
+          $summaryPath = "testReports\23-test-summary.md"
           if (Test-Path $summaryPath) {
             Get-Content $summaryPath | Add-Content $env:GITHUB_STEP_SUMMARY
           } else {
@@ -311,8 +325,8 @@ jobs:
         with:
           name: pytest-23-case-summary
           path: |
-            test-reports/23-test-summary.html
-            test-reports/23-test-summary.md
+            testReports/23-test-summary.html
+            testReports/23-test-summary.md
           if-no-files-found: warn
           retention-days: 14
       - name: Upload combined CI reports
@@ -320,6 +334,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: complete-pytest-reports
-          path: test-reports/
+          path: testReports/
           if-no-files-found: warn
           retention-days: 14

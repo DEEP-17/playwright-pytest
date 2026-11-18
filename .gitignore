@@ -1,8 +1,10 @@
 .env
 .env.*
 !.env.example
+.authenticationState/
 .auth/
 *-state.json
+testResults/
 test-results/
 playwright-report/
 .playwright-mcp/

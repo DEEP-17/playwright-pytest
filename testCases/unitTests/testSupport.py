@@ -1,7 +1,7 @@
-from data.factory import TestDataFactory
-from data.objects import TestData
-from utils.config import Settings
-from utils.test_data import load_test_data
+from testData.testDataFactory import TestDataFactory
+from testData.testDataObjects import TestData
+from sharedUtilities.projectConfiguration import Settings
+from testData.testDataLoader import load_test_data
 
 
 def testSettingsAreReadFromEnvironmentValues() -> None:

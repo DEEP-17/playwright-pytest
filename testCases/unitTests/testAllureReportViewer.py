@@ -2,9 +2,14 @@ import json
 from pathlib import Path
 from threading import Thread
 from urllib.request import urlopen
-from scripts.openAllureReport import create_server
 
-def testAllureViewerServesReportDataOverHttp(tmp_path: Path) -> None:
+import pytest
+
+from automationScripts.openAllureReport import create_server
+
+def testAllureViewerServesReportDataOverHttpWithoutAccessLogs(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     (tmp_path / "index.html").write_text("<html>Allure</html>", encoding="utf-8")
     widgets = tmp_path / "widgets"
     widgets.mkdir()
@@ -23,3 +28,4 @@ def testAllureViewerServesReportDataOverHttp(tmp_path: Path) -> None:
         server.shutdown()
         thread.join()
         server.server_close()
+    assert capsys.readouterr().err == ""

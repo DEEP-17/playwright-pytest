@@ -1,6 +1,6 @@
 from datetime import date
 import pytest
-from helpers.calendar_helper import calendar_date_label, days_from_today, ordinal
+from testHelpers.calendarHelper import calendar_date_label, days_from_today, ordinal
 
 @pytest.mark.all
 @pytest.mark.parametrize(
