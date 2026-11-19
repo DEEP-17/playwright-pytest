@@ -28,6 +28,21 @@ class TripSavedTripsPage(BasePage):
             raise RuntimeError(
                 f"Loading saved trips failed with HTTP {response.status}."
             )
+        self.wait_for_plans(response)
+
+    def wait_for_plans(self, response: Response) -> None:
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise RuntimeError("The saved-trips response was not a JSON object.")
+        new_trip_plans = payload.get("newTripPlan")
+        ai_trip_plans = payload.get("AITripPlanResponse")
+        if not isinstance(new_trip_plans, list) or not isinstance(
+            ai_trip_plans, list
+        ):
+            raise RuntimeError("The saved-trips response had an invalid plan list.")
+        expect(
+            self.page.get_by_role("button", name="Delete")
+        ).to_have_count(len(new_trip_plans) + len(ai_trip_plans), timeout=60_000)
 
     def saved_trip_count(self) -> int:
         self._wait_for_saved_trips()

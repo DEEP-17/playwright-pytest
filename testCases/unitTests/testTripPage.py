@@ -88,13 +88,26 @@ def testSavedTripNavigationWaitsForUrlWithoutNetworkIdle(
     )
 
 
-def testSavedTripReloadWaitsForPlanResponse() -> None:
+def testSavedTripReloadWaitsForPlanResponse(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     page = Mock()
     response_context = Mock()
     response_context.__enter__ = Mock(return_value=response_context)
     response_context.__exit__ = Mock(return_value=False)
-    response_context.value = Mock(ok=True, status=201)
+    response_context.value = Mock(
+        ok=True,
+        status=201,
+        json=Mock(
+            return_value={"newTripPlan": [], "AITripPlanResponse": []}
+        ),
+    )
     page.expect_response.return_value = response_context
+    count_assertion = Mock()
+    monkeypatch.setattr(
+        "pageObjectModel.tripPages.tripSavedTripsPage.expect",
+        lambda _: count_assertion,
+    )
 
     TripSavedTripsPage(page).reload_and_wait_for_plans()
 
@@ -103,3 +116,25 @@ def testSavedTripReloadWaitsForPlanResponse() -> None:
         TripSavedTripsPage.is_user_plans_response,
         timeout=60_000,
     )
+    count_assertion.to_have_count.assert_called_once_with(0, timeout=60_000)
+
+
+def testSavedTripPageWaitsUntilApiPlansAreRendered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    page = Mock()
+    response = Mock()
+    response.json.return_value = {
+        "newTripPlan": [{}, {}],
+        "AITripPlanResponse": [{}],
+    }
+    count_assertion = Mock()
+    monkeypatch.setattr(
+        "pageObjectModel.tripPages.tripSavedTripsPage.expect",
+        lambda _: count_assertion,
+    )
+
+    TripSavedTripsPage(page).wait_for_plans(response)
+
+    page.get_by_role.assert_called_once_with("button", name="Delete")
+    count_assertion.to_have_count.assert_called_once_with(3, timeout=60_000)

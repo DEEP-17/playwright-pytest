@@ -52,5 +52,6 @@ class HomePage(BasePage):
             raise RuntimeError(
                 f"Loading saved trips failed with HTTP {response.status}."
             )
+        TripSavedTripsPage(saved_trips_page).wait_for_plans(response)
         self.log_step("Saved trips page opened")
         return saved_trips_page
