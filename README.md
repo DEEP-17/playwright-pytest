@@ -98,7 +98,9 @@ session-state evidence, and failure screenshots, videos, and traces.
 The workflow also runs Codacy's static-analysis action as an independent
 quality check. Codacy exports a SARIF report as the `codacy-sarif-report`
 artifact and publishes findings to GitHub code scanning when repository
-permissions allow it.
+permissions allow it. Workflow permissions default to read-only, newer runs
+cancel superseded runs on the same branch or pull request, and external actions
+are pinned to commit SHAs. Dependabot checks GitHub Actions dependencies weekly.
 Pytest writes a styled, self-contained HTML report to `testResults/report.html`
 with run totals, pass rate, suite labels, failure diagnostics, and environment
 metadata. It includes outcome and per-suite charts. Allure results are written
