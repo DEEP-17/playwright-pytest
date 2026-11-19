@@ -96,10 +96,14 @@ uses the configured test account. CI uploads per-job reports and a combined
 bundle named `complete-pytest-reports`; the bundle includes the summary, logs,
 session-state evidence, and failure screenshots, videos, and traces.
 The workflow also runs Codacy's static-analysis action as an independent
-quality check.
-Pytest writes a self-contained HTML report to `testResults/report.html` and
-Allure results to `testResults/allureResults`; failed browser tests also
-retain screenshots, videos, and traces. CI combines the Allure results and
+quality check. Codacy exports a SARIF report as the `codacy-sarif-report`
+artifact and publishes findings to GitHub code scanning when repository
+permissions allow it.
+Pytest writes a styled, self-contained HTML report to `testResults/report.html`
+with run totals, pass rate, suite labels, failure diagnostics, and environment
+metadata. It includes outcome and per-suite charts. Allure results are written
+to `testResults/allureResults`; failed browser tests also retain screenshots,
+videos, and traces. CI combines the Allure results and
 uploads the generated HTML report as the `allure-report` artifact.
 After downloading and extracting that artifact, double-click `OPEN_REPORT.bat`
 in the extracted report folder. This serves the report on localhost and opens
@@ -108,7 +112,10 @@ it in your browser; do not open `index.html` directly, because browser
 return 404 for report JSON. If that happens, close the `index.html` tab and run
 `OPEN_REPORT.bat`. The workflow validates the report's test-data files and
 localhost routes before publishing the artifact. Python 3 must be installed.
-To generate the HTML report locally, install Allure CLI with Java 17 and run
+The combined CI test-case summary is available as the interactive
+`pytest-23-case-summary` artifact, with category totals, outcome and per-area
+charts, search, status filters, and expandable failure detail. To generate the
+Allure HTML report locally, install Allure CLI with Java 17 and run
 `allure generate testResults/allureResults --clean -o testResults/allureReport`.
 
 Pull requests run a dependency-based impact analysis. It lists changed files

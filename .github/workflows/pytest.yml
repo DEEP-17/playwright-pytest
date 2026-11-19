@@ -13,10 +13,31 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
       - name: Run Codacy analysis
         uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08 # v4.4.7
+        with:
+          format: sarif
+          output: codacy-results.sarif
+          max-allowed-issues: "2147483647"
+          gh-code-scanning-compat: "true"
+      - name: Publish Codacy findings to GitHub code scanning
+        if: ${{ always() && hashFiles('codacy-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: codacy-results.sarif
+          category: codacy-analysis-cli
+      - name: Upload Codacy SARIF report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codacy-sarif-report
+          path: codacy-results.sarif
+          if-no-files-found: warn
+          retention-days: 14
 
   impact-analysis:
     name: Pull request impact analysis
@@ -78,6 +99,7 @@ jobs:
           testCases/unitTests/testSkipCases.py
           testCases/unitTests/testImpactAnalysis.py
           testCases/unitTests/testLogging.py
+          testCases/unitTests/testReportHooks.py
           testCases/unitTests/testHotelPage.py
           testCases/unitTests/testTripPage.py
           testCases/unitTests/testAllureReportViewer.py

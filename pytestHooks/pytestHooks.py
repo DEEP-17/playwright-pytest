@@ -1,11 +1,14 @@
 import json
+import html
 import logging
 import os
 import re
 import shutil
+import time
 import warnings
 from collections.abc import Generator
 from pathlib import Path
+from typing import Protocol
 import pytest
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
@@ -20,6 +23,12 @@ from pytestHooks.browserDiagnostics import (
 )
 
 _UI_LOG_LEVEL = 25
+_REPORT_RESULTS: dict[str, dict[str, float | str]] = {}
+_REPORT_STARTED_AT = 0.0
+
+
+class _HtmlReport(Protocol):
+    title: str
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -29,6 +38,177 @@ def pytest_configure(config: pytest.Config) -> None:
     formatter = getattr(cli_handler, "formatter", None)
     if formatter is not None and hasattr(formatter, "add_color_level"):
         formatter.add_color_level("UI", "cyan", bold=True)
+
+
+def pytest_html_report_title(report: _HtmlReport) -> None:
+    report.title = "Playwright Test Results"
+
+
+def pytest_html_results_table_header(cells: list[str]) -> None:
+    cells.insert(1, "<th>Suite</th>")
+
+
+def pytest_html_results_table_row(
+    report: pytest.TestReport, cells: list[str]
+) -> None:
+    suite = _suite_for_nodeid(report.nodeid)
+    cells.insert(1, f"<td>{html.escape(suite)}</td>")
+
+
+def _suite_for_nodeid(nodeid: str) -> str:
+    test_path = nodeid.split("::", 1)[0].replace("\\", "/")
+    path_parts = test_path.split("/")
+    suite = "Other"
+    if "unitTests" in path_parts:
+        suite = "Unit tests"
+    elif "endToEndTests" in path_parts:
+        suite = "End-to-end"
+    return suite
+
+
+def _chart_segment(count: int, total: int, label: str, outcome: str) -> str:
+    if not count or not total:
+        return ""
+    width = count / total * 100
+    return (
+        f'<span class="chart-segment chart-{outcome}" '
+        f'style="width:{width:.2f}%" title="{label}: {count}"></span>'
+    )
+
+
+def _report_charts(counts: dict[str, int]) -> str:
+    total = sum(counts.values())
+    outcomes = (
+        ("Passed", counts["passed"], "passed"),
+        (
+            "Failed / errors",
+            counts["failed"] + counts["error"] + counts["xpassed"],
+            "failed",
+        ),
+        ("Skipped / xfailed", counts["skipped"] + counts["xfailed"], "skipped"),
+    )
+    segments = "".join(
+        _chart_segment(count, total, label, style)
+        for label, count, style in outcomes
+    )
+    legend = "".join(
+        f'<li><span class="legend-dot chart-{style}"></span>'
+        f"{label}: <strong>{count}</strong></li>"
+        for label, count, style in outcomes
+    )
+    suite_counts: dict[str, dict[str, int]] = {}
+    for nodeid, result in _REPORT_RESULTS.items():
+        suite = _suite_for_nodeid(nodeid)
+        suite_counts.setdefault(suite, {}).setdefault(str(result["status"]), 0)
+        suite_counts[suite][str(result["status"])] += 1
+
+    suite_rows = []
+    for suite, statuses in sorted(suite_counts.items()):
+        passed = statuses.get("passed", 0)
+        failed = statuses.get("failed", 0) + statuses.get("error", 0)
+        failed += statuses.get("xpassed", 0)
+        skipped = statuses.get("skipped", 0) + statuses.get("xfailed", 0)
+        suite_total = passed + failed + skipped
+        suite_segments = "".join(
+            _chart_segment(count, suite_total, label, style)
+            for label, count, style in (
+                ("Passed", passed, "passed"),
+                ("Failed / errors", failed, "failed"),
+                ("Skipped / xfailed", skipped, "skipped"),
+            )
+        )
+        suite_rows.append(
+            '<div class="suite-chart__row">'
+            f'<div class="suite-chart__labels"><span>{html.escape(suite)}</span>'
+            f"<strong>{passed}/{suite_total} passed</strong></div>"
+            f'<div class="chart-stack" role="img" '
+            f'aria-label="{passed} passed, {failed} failed, {skipped} skipped">'
+            f"{suite_segments}</div></div>"
+        )
+
+    no_results = (
+        '<p class="chart-empty">No test outcomes to chart.</p>' if not total else ""
+    )
+    return (
+        '<section class="report-charts" aria-label="Test charts">'
+        '<article class="report-chart-card"><h3>Outcome distribution</h3>'
+        f'<div class="chart-stack chart-stack--large" role="img" '
+        f'aria-label="{counts["passed"]} passed, '
+        f'{outcomes[1][1]} failed or errored, {outcomes[2][1]} skipped">'
+        f"{segments}</div><ul class=\"chart-legend\">{legend}</ul>{no_results}"
+        "</article>"
+        '<article class="report-chart-card"><h3>Results by suite</h3>'
+        f'<div class="suite-chart">{"".join(suite_rows)}</div>'
+        "</article></section>"
+    )
+
+
+def _report_dashboard_html(duration: float) -> str:
+    counts = {
+        "passed": 0,
+        "failed": 0,
+        "error": 0,
+        "skipped": 0,
+        "xfailed": 0,
+        "xpassed": 0,
+    }
+    for result in _REPORT_RESULTS.values():
+        status = str(result["status"])
+        if status in counts:
+            counts[status] += 1
+
+    total = sum(counts.values())
+    failures = counts["failed"] + counts["error"] + counts["xpassed"]
+    skipped = counts["skipped"] + counts["xfailed"]
+    pass_rate = round(counts["passed"] / total * 100) if total else 0
+    if failures:
+        run_status = "Review failures"
+        status_class = "needs-attention"
+    elif total:
+        run_status = "All checks passed"
+        status_class = "run-passed"
+    else:
+        run_status = "No tests collected"
+        status_class = "run-empty"
+    duration_label = (
+        f"{int(duration // 60)}m {int(duration % 60):02d}s"
+        if duration >= 60
+        else f"{duration:.1f}s"
+    )
+    return (
+        '<section class="report-dashboard">'
+        '<div class="report-dashboard__heading">'
+        '<div><span class="report-eyebrow">AUTOMATION RUN</span>'
+        '<h2>Execution overview</h2>'
+        '<p>Browser checks, test outcomes, and run health at a glance.</p></div>'
+        f'<span class="run-status {status_class}">{run_status}</span>'
+        "</div>"
+        '<div class="report-metrics">'
+        f'<div class="report-metric"><span>Total tests</span><strong>{total}</strong></div>'
+        f'<div class="report-metric metric-passed"><span>Passed</span><strong>{counts["passed"]}</strong></div>'
+        f'<div class="report-metric metric-failed"><span>Failed / errors</span><strong>{failures}</strong></div>'
+        f'<div class="report-metric metric-skipped"><span>Skipped / xfailed</span><strong>{skipped}</strong></div>'
+        f'<div class="report-metric"><span>Run duration</span><strong>{duration_label}</strong></div>'
+        "</div>"
+        '<div class="report-progress">'
+        '<div class="report-progress__labels">'
+        f"<span>Pass rate</span><strong>{pass_rate}%</strong></div>"
+        '<div class="report-progress__track">'
+        f'<span style="width:{pass_rate}%"></span></div></div>'
+        f"{_report_charts(counts)}"
+        "</section>"
+    )
+
+
+def pytest_html_results_summary(
+    prefix: list[str],
+    summary: list[str],
+    postfix: list[str],
+    session: pytest.Session,
+) -> None:
+    del summary, postfix, session
+    duration = time.perf_counter() - _REPORT_STARTED_AT
+    prefix.insert(0, _report_dashboard_html(duration))
 
 
 def _skip_reason(node_id: str, selectors: list[str]) -> str | None:
@@ -103,6 +283,9 @@ def _prepare_output_directories(config: pytest.Config) -> None:
         report_path.parent.mkdir(parents=True, exist_ok=True)
 
 def pytest_sessionstart(session: pytest.Session) -> None:
+    global _REPORT_STARTED_AT
+    _REPORT_RESULTS.clear()
+    _REPORT_STARTED_AT = time.perf_counter()
     state_directory = Path(session.config.rootpath) / ".authenticationState"
     if state_directory.is_symlink():
         raise pytest.UsageError(
@@ -174,6 +357,28 @@ def pytest_runtest_makereport(
 ) -> Generator[None, None, None]:
     outcome = yield
     report = outcome.get_result()
+    if report.failed:
+        status = "failed" if report.when == "call" else "error"
+    elif report.skipped:
+        status = "xfailed" if hasattr(report, "wasxfail") else "skipped"
+    elif hasattr(report, "wasxfail"):
+        status = "xpassed"
+    else:
+        status = "passed"
+    result = _REPORT_RESULTS.setdefault(
+        report.nodeid, {"status": status, "duration": 0.0}
+    )
+    result["duration"] = float(result["duration"]) + report.duration
+    priority = {
+        "passed": 0,
+        "xfailed": 1,
+        "skipped": 1,
+        "xpassed": 2,
+        "failed": 3,
+        "error": 3,
+    }
+    if priority[status] >= priority[str(result["status"])]:
+        result["status"] = status
     if not report.failed:
         report.sections[:] = [
             (name, content)

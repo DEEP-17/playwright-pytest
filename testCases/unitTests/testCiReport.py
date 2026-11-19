@@ -30,7 +30,11 @@ def testCiReportReadsAndGroupsJunitResults(tmp_path: Path) -> None:
         results, expected_count=23
     )
     report = render_html(results, expected_count=23)
-    assert "Workbook UI test results" in report
+    assert "UI test report" in report
+    assert "Outcome distribution" in report
+    assert "Pass rate by test area" in report
+    assert 'id="report-search"' in report
+    assert 'id="status-filter"' in report
     assert "&lt;unexpected&gt;" in report
 
 def testCiReportFlagsSkippedAndDuplicateResults(tmp_path: Path) -> None:
@@ -71,7 +75,9 @@ def testCiReportAcceptsExact23CaseLaneBreakdown(tmp_path: Path) -> None:
     results = read_test_results(tmp_path)
     assert len(results) == 23
     assert validation_errors(results, expected_count=23) == []
-    assert render_html(results, expected_count=23).count("<tr>") == 24
+    report = render_html(results, expected_count=23)
+    assert report.count('data-status="passed"') == 23
+    assert 'aria-label="23 passed, 0 failed or errored, 0 skipped"' in report
 
 def testCiReportAllowsTargetedPartialResults(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
