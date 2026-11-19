@@ -78,6 +78,7 @@ jobs:
           testCases/unitTests/testSkipCases.py
           testCases/unitTests/testImpactAnalysis.py
           testCases/unitTests/testLogging.py
+          testCases/unitTests/testTripPage.py
           testCases/unitTests/testAllureReportViewer.py
       - name: Upload pytest report and browser artifacts
         if: always()

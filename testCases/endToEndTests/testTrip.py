@@ -32,6 +32,7 @@ def testE13SavedItineraryRemainsInSavedTrips(
     authenticated_page: Page,
     home_page: HomePage,
     test_data: TestData,
+    request: pytest.FixtureRequest,
 ) -> None:
     assert authenticated_page is home_page.page
     saved_trips_tab = home_page.open_saved_trips()
@@ -45,9 +46,12 @@ def testE13SavedItineraryRemainsInSavedTrips(
     )
     trip_plan_tab = TripSearchPage(planner_tab).search_and_plan(fresh_trip)
     trip_plan_page = TripPlanPage(trip_plan_tab)
-    trip_plan_page.save()
+    created_trip = trip_plan_page.save()
+    request.addfinalizer(
+        lambda: trip_plan_page.delete_saved_trip(created_trip)
+    )
     trip_plan_page.save_current_state("trip-planned-state.json")
-    saved_trips_tab.reload(wait_until="domcontentloaded")
+    saved_trips_page.reload_and_wait_for_plans()
     expect(
         saved_trips_tab.get_by_role("button", name="Delete")
     ).to_have_count(existing_trip_count + 1, timeout=30_000)
@@ -71,7 +75,7 @@ def testE14DeleteOldTripCreateFreshTripAndVerifyAfterRefresh(
     trip_plan_tab = TripSearchPage(planner_tab).search_and_plan(fresh_trip)
     trip_plan_page = TripPlanPage(trip_plan_tab)
     trip_plan_page.save()
-    saved_trips_tab.reload(wait_until="domcontentloaded")
+    saved_trips_page.reload_and_wait_for_plans()
     expect(
         saved_trips_tab.get_by_role("button", name="Delete")
     ).to_have_count(existing_trip_count, timeout=30_000)

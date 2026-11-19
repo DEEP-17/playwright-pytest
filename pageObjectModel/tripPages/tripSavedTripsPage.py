@@ -1,11 +1,33 @@
-from urllib.parse import urljoin
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
+from urllib.parse import urljoin, urlsplit
+from playwright.sync_api import (
+    Page,
+    Response,
+    TimeoutError as PlaywrightTimeoutError,
+    expect,
+)
 from pageObjectModel.basePage.basePage import BasePage
 
 class TripSavedTripsPage(BasePage):
     def _wait_for_saved_trips(self) -> None:
         self.page.wait_for_url("**/tripplanner/saved-trips", timeout=30_000)
-        self.wait_for_network()
+
+    @staticmethod
+    def is_user_plans_response(response: Response) -> bool:
+        return (
+            response.request.method == "GET"
+            and urlsplit(response.url).path.startswith("/api/v1/get_user_plan/")
+        )
+
+    def reload_and_wait_for_plans(self) -> None:
+        with self.page.expect_response(
+            self.is_user_plans_response, timeout=60_000
+        ) as response_info:
+            self.page.reload(wait_until="domcontentloaded")
+        response = response_info.value
+        if not response.ok:
+            raise RuntimeError(
+                f"Loading saved trips failed with HTTP {response.status}."
+            )
 
     def saved_trip_count(self) -> int:
         self._wait_for_saved_trips()
