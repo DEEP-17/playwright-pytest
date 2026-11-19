@@ -74,20 +74,26 @@ runs:
       if: ${{ always() && inputs.authenticated == 'true' }}
       shell: pwsh
       run: |
-        New-Item -ItemType Directory -Force "testResults" | Out-Null
-        $storageState = Test-Path ".authenticationState\authenticated-state.json"
-        $sessionStorage = Test-Path ".authenticationState\authenticated-state.session-storage.json"
+        $evidencePath = "testResults\session-state-evidence.json"
+        if (-not (Test-Path $evidencePath)) {
+          throw "Pytest did not create session-state evidence."
+        }
+        $evidence = Get-Content $evidencePath -Raw | ConvertFrom-Json
+        $storageState = [bool]$evidence.storageStateCreated
+        $sessionStorage = [bool]$evidence.sessionStorageCreated
+        $stateCleaned = -not (Test-Path ".authenticationState")
         [ordered]@{
           case = "${{ inputs.case-name }}"
           pytestOutcome = "${{ steps.run-tests.outcome }}"
           storageStateCreated = $storageState
           sessionStorageCreated = $sessionStorage
+          stateDirectoryCleaned = $stateCleaned
         } | ConvertTo-Json | Set-Content "testResults\session-state-evidence.json"
         if (
           "${{ steps.run-tests.outcome }}" -eq "success" -and
-          (-not $storageState -or -not $sessionStorage)
+          (-not $storageState -or -not $sessionStorage -or -not $stateCleaned)
         ) {
-          throw "Authenticated storage-state files were not created."
+          throw "Authenticated session state was not recorded and cleaned."
         }
     - name: Upload pytest report and browser artifacts
       if: always()
@@ -97,3 +103,13 @@ runs:
         path: testResults/
         if-no-files-found: warn
         retention-days: 14
+    - name: Remove session state and local logs
+      if: always()
+      shell: pwsh
+      run: |
+        if (Test-Path ".authenticationState") {
+          Remove-Item -LiteralPath ".authenticationState" -Recurse -Force
+        }
+        if (Test-Path "testResults\pytest.log") {
+          Remove-Item -LiteralPath "testResults\pytest.log" -Force
+        }

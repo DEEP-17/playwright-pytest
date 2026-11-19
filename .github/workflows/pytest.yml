@@ -8,6 +8,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  codacy-analysis:
+    name: Codacy code quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Codacy analysis
+        uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08 # v4.4.7
+
   impact-analysis:
     name: Pull request impact analysis
     if: ${{ github.event_name == 'pull_request' }}
@@ -77,6 +87,16 @@ jobs:
           path: testResults/
           if-no-files-found: warn
           retention-days: 14
+      - name: Remove session state and local logs
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path ".authenticationState") {
+            Remove-Item -LiteralPath ".authenticationState" -Recurse -Force
+          }
+          if (Test-Path "testResults\pytest.log") {
+            Remove-Item -LiteralPath "testResults\pytest.log" -Force
+          }
 
   flight-tests:
     name: Flight test cases
@@ -179,20 +199,26 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force "testResults" | Out-Null
-          $storageState = Test-Path ".authenticationState\authenticated-state.json"
-          $sessionStorage = Test-Path ".authenticationState\authenticated-state.session-storage.json"
+          $evidencePath = "testResults\session-state-evidence.json"
+          if (-not (Test-Path $evidencePath)) {
+            throw "Pytest did not create session-state evidence."
+          }
+          $evidence = Get-Content $evidencePath -Raw | ConvertFrom-Json
+          $storageState = [bool]$evidence.storageStateCreated
+          $sessionStorage = [bool]$evidence.sessionStorageCreated
+          $stateCleaned = -not (Test-Path ".authenticationState")
           [ordered]@{
             job = "saved-trip-tests"
             pytestOutcome = "${{ steps.run-tests.outcome }}"
             storageStateCreated = $storageState
             sessionStorageCreated = $sessionStorage
+            stateDirectoryCleaned = $stateCleaned
           } | ConvertTo-Json | Set-Content "testResults\session-state-evidence.json"
           if (
             "${{ steps.run-tests.outcome }}" -eq "success" -and
-            (-not $storageState -or -not $sessionStorage)
+            (-not $storageState -or -not $sessionStorage -or -not $stateCleaned)
           ) {
-            throw "Authenticated storage-state files were not created."
+            throw "Authenticated session state was not recorded and cleaned."
           }
       - name: Upload pytest report and browser artifacts
         if: always()
@@ -202,6 +228,16 @@ jobs:
           path: testResults/
           if-no-files-found: warn
           retention-days: 14
+      - name: Remove session state and local logs
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path ".authenticationState") {
+            Remove-Item -LiteralPath ".authenticationState" -Recurse -Force
+          }
+          if (Test-Path "testResults\pytest.log") {
+            Remove-Item -LiteralPath "testResults\pytest.log" -Force
+          }
 
   testReports:
     name: Collect CI test reports
@@ -277,15 +313,7 @@ jobs:
           Copy-Item automationScripts\openAllureReport.py testReports\allureReport\openAllureReport.py
           Copy-Item automationScripts\openAllureReport.bat testReports\allureReport\OPEN_REPORT.bat
           Copy-Item automationScripts\allureReportInstructions.txt testReports\allureReport\OPEN_REPORT.txt
-          $reportIndex = Join-Path (Get-Location) "testReports\allureReport\index.html"
-          $summaryPath = Join-Path (Get-Location) "testReports\allureReport\widgets\summary.json"
-          if (-not (Test-Path $reportIndex) -or -not (Test-Path $summaryPath)) {
-            throw "Allure report generation did not produce index.html and widgets/summary.json."
-          }
-          $summary = Get-Content $summaryPath -Raw | ConvertFrom-Json
-          if ($summary.statistic.total -le 0) {
-            throw "Allure report contains no test results."
-          }
+          python -m automationScripts.validateAllureReport testReports\allureReport
       - name: Upload Allure HTML report
         if: ${{ always() && steps.aggregate-allure.outputs.has-results == 'true' }}
         uses: actions/upload-artifact@v4

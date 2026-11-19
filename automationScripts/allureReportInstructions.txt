@@ -1,5 +1,13 @@
-Extract the entire artifact, then double-click `OPEN_REPORT.bat`.
-The launcher starts the report on localhost and opens it in your browser.
+Extract the entire `allure-report` artifact.
+
+To open the report, double-click `OPEN_REPORT.bat`. It starts the report on
+localhost and opens it in your browser. Keep the command window open while
+viewing the report; close it to stop the local server.
+
+If the report looks blank or its data requests return 404, it was likely opened
+directly as `index.html`. Close that tab and use `OPEN_REPORT.bat` instead.
+Browsers block Allure's report-data requests when the page is opened with
+`file://`.
+
 Python 3 must be installed. If the launcher is unavailable, run
 `python openAllureReport.py` from this folder.
-Do not open index.html directly; browser file:// restrictions block report data.

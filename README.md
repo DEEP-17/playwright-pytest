@@ -63,10 +63,13 @@ pull requests, manual dispatch, and the daily 02:00 UTC schedule; missing
 rather than silently skipping the job. Configure those repository secrets to
 run the authenticated suites.
 
-Page-object steps use Python's `logging` library. Pytest streams INFO-level logs
-to the console and saves DEBUG-level Python logs as `testResults/pytest.log`;
-CI can override these levels to stream DEBUG output. Browser/UI diagnostics are
-captured per test and replayed to the console only when that test fails. UI
+Page-object steps use Python's `logging` library. Pytest streams configured logs
+to the console; `testResults/pytest.log` contains only failed-test records,
+including captured logs, browser/UI diagnostics, exception details, and test
+context as one JSON object per line. A successful run removes the empty log
+file. CI can override console levels to stream DEBUG output. Browser/UI
+diagnostics are captured per test and replayed to the console only when that
+test fails. UI
 interactions use a separate cyan, bold `UI` log level; browser warnings and
 errors use pytest's severity colors. Diagnostics are also attached to the
 failed test's JUnit/HTML report. Network request logs are not captured. UI
@@ -80,14 +83,20 @@ skipped, or not passed.
 The HTML/Markdown summary is also uploaded as `pytest-23-case-summary`.
 
 Each authenticated lane creates its own `.authenticationState` directory on its
-runner and verifies that both storage-state files were written. These files
-contain credentials and are deliberately not uploaded or shared between jobs. CI
-artifacts contain pytest and JUnit reports, debug logs, browser failure media,
-and a non-sensitive state-creation evidence manifest. The saved-trip flow
+runner and verifies that both storage-state files were written. Pytest clears
+stale state before a run and deletes every stage-state file when the session
+ends; CI also deletes the local log and performs unconditional session-state
+cleanup after uploading artifacts. These files contain credentials and are
+never uploaded or shared between jobs. CI
+artifacts contain pytest and JUnit reports, failure-only logs, browser failure
+media, and a non-sensitive state-creation/cleanup evidence manifest. Successful
+runs do not retain a `pytest.log` file. The saved-trip flow
 deletes an existing saved trip before creating one, so its automatic CI run
 uses the configured test account. CI uploads per-job reports and a combined
 bundle named `complete-pytest-reports`; the bundle includes the summary, logs,
 session-state evidence, and failure screenshots, videos, and traces.
+The workflow also runs Codacy's static-analysis action as an independent
+quality check.
 Pytest writes a self-contained HTML report to `testResults/report.html` and
 Allure results to `testResults/allureResults`; failed browser tests also
 retain screenshots, videos, and traces. CI combines the Allure results and
@@ -95,7 +104,10 @@ uploads the generated HTML report as the `allure-report` artifact.
 After downloading and extracting that artifact, double-click `OPEN_REPORT.bat`
 in the extracted report folder. This serves the report on localhost and opens
 it in your browser; do not open `index.html` directly, because browser
-`file://` restrictions block the report data. Python 3 must be installed.
+`file://` restrictions block the report data and make the page appear empty or
+return 404 for report JSON. If that happens, close the `index.html` tab and run
+`OPEN_REPORT.bat`. The workflow validates the report's test-data files and
+localhost routes before publishing the artifact. Python 3 must be installed.
 To generate the HTML report locally, install Allure CLI with Java 17 and run
 `allure generate testResults/allureResults --clean -o testResults/allureReport`.
 

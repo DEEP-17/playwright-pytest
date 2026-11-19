@@ -1,11 +1,10 @@
 import json
 import logging
-import os
-import re
 from typing import Protocol
-from urllib.parse import urlsplit, urlunsplit
 import pytest
 from playwright.sync_api import ConsoleMessage, Page
+from sharedUtilities.structuredLogging import safe_log_message
+
 BROWSER_DIAGNOSTICS: pytest.StashKey[list[str]] = pytest.StashKey()
 _UI_LOG_LEVEL = 25
 logging.addLevelName(_UI_LOG_LEVEL, "UI")
@@ -101,44 +100,7 @@ _UI_INTERACTION_SCRIPT = r"""
 """
 
 def _safe_message(message: str) -> str:
-    message = re.sub(
-        r"https?://[^\s\"'<>]+",
-        lambda match: _safe_url(match.group(0)),
-        message,
-    )
-    for variable in ("USER_EMAIL", "USER_PASSWORD"):
-        secret = os.environ.get(variable)
-        if secret:
-            message = message.replace(secret, "[REDACTED]")
-
-    message = re.sub(
-        r"(?i)(password|token|secret|authorization|cookie)(\s*[=:]\s*)"
-        r"(['\"]?)[^,\s;'\"}]+",
-        r"\1\2[REDACTED]",
-        message,
-    )
-    message = re.sub(
-        r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
-        "[REDACTED_EMAIL]",
-        message,
-        flags=re.IGNORECASE,
-    )
-    return message
-
-def _safe_url(url: str) -> str:
-    parsed = urlsplit(url)
-    safe_authority = parsed.netloc.rsplit("@", 1)[-1]
-    safe_url = urlunsplit((parsed.scheme, safe_authority, parsed.path, "", ""))
-    for variable in ("USER_EMAIL", "USER_PASSWORD"):
-        secret = os.environ.get(variable)
-        if secret:
-            safe_url = safe_url.replace(secret, "[REDACTED]")
-    return re.sub(
-        r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
-        "[REDACTED_EMAIL]",
-        safe_url,
-        flags=re.IGNORECASE,
-    )
+    return safe_log_message(message)
 
 def attach_browser_diagnostics(
     page: Page, node: _StashNode
@@ -210,11 +172,3 @@ def log_failure_diagnostics(node_id: str, events: list[str]) -> None:
             logging.getLogger("playwright.browser").warning(event)
         else:
             logging.getLogger("playwright.browser").error(event)
-
-def pytest_configure(config: pytest.Config) -> None:
-    logging.addLevelName(_UI_LOG_LEVEL, "UI")
-    logging_plugin = config.pluginmanager.get_plugin("logging-plugin")
-    cli_handler = getattr(logging_plugin, "log_cli_handler", None)
-    formatter = getattr(cli_handler, "formatter", None)
-    if formatter is not None and hasattr(formatter, "add_color_level"):
-        formatter.add_color_level("UI", "cyan", bold=True)
