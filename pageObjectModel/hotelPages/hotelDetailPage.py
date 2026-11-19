@@ -29,7 +29,7 @@ class HotelDetailPage(BasePage):
 
     def click_book_now(self) -> bool:
         book_now = self.page.locator("button").filter(has_text="Book Now").first
-        if not book_now.is_visible():
+        if not self.has_book_now_button():
             if self.is_sold_out():
                 self.log_step("Hotel detail page is sold out; booking is unavailable.")
             else:
