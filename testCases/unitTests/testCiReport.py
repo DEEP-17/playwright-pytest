@@ -135,6 +135,11 @@ def testExtractSkippedTestsCreatesDedicatedReports(tmp_path: Path) -> None:
     assert "testE9" in markdown
     assert "KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL" in markdown
     assert "testFlight.py:209" in markdown
+    html_report = (output_dir / "skipped-tests.html").read_text(
+        encoding="utf-8"
+    )
+    assert "UI test report" in html_report
+    assert 'class="status-badge skipped">SKIPPED</span>' in html_report
     results = read_test_results(reports_dir)
     assert len(results) == 2
     assert sum(result.node_id.endswith("::testE9") for result in results) == 1
@@ -160,6 +165,7 @@ def testExtractSkippedTestsRemovesStaleArtifactWhenNoSkips(
     assert extract_skipped_tests(reports_dir, output_dir) == 0
     assert not junit_path.exists()
     assert not markdown_path.exists()
+    assert not (output_dir / "skipped-tests.html").exists()
 
 
 def testCiReportAcceptsExact23CaseLaneBreakdown(tmp_path: Path) -> None:

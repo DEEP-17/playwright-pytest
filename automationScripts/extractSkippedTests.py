@@ -5,11 +5,14 @@ import copy
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from automationScripts.ciReport import read_test_results, render_html
+
 
 def extract_skipped_tests(reports_dir: Path, output_dir: Path) -> int:
     junit_path = output_dir / "junit-skipped-tests.xml"
+    html_path = output_dir / "skipped-tests.html"
     markdown_path = output_dir / "skipped-tests.md"
-    for output_path in (junit_path, markdown_path):
+    for output_path in (junit_path, html_path, markdown_path):
         if output_path.exists():
             output_path.unlink()
 
@@ -44,6 +47,10 @@ def extract_skipped_tests(reports_dir: Path, output_dir: Path) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     ET.ElementTree(suite).write(
         junit_path, encoding="utf-8", xml_declaration=True
+    )
+    results = read_test_results(output_dir)
+    html_path.write_text(
+        render_html(results, expected_count=len(results)), encoding="utf-8"
     )
 
     lines = [

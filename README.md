@@ -87,7 +87,8 @@ and is not counted as passed. Once the fare is numeric again, E9 must pass
 normally.
 The HTML/Markdown summary is also uploaded as `pytest-23-case-summary`.
 When skips exist, `pytest-skipped-cases` is uploaded separately with only
-skipped JUnit cases and a Markdown list of each case and its skip details.
+skipped JUnit cases, a standalone HTML report, and a Markdown list of each case
+and its skip details.
 Failed test runs also upload per-lane `pytest-failure-evidence-*` artifacts with
 JUnit/HTML reports, failure logs, screenshots, videos, traces, and Allure results.
 

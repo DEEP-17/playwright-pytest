@@ -336,6 +336,7 @@ jobs:
           name: pytest-skipped-cases
           path: |
             skipped-test-artifact/junit-skipped-tests.xml
+            skipped-test-artifact/skipped-tests.html
             skipped-test-artifact/skipped-tests.md
           if-no-files-found: error
           retention-days: 14
