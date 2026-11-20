@@ -35,6 +35,15 @@ def _category_for_report(report_path: Path) -> str:
 def _base_node_id(node_id: str) -> str:
     return node_id.split("[", 1)[0]
 
+
+def _is_expected_e9_skip(result: TestResult) -> bool:
+    return (
+        result.status == "SKIPPED"
+        and _base_node_id(result.node_id) in _KNOWN_ISSUE_NODE_IDS
+        and _KNOWN_ISSUE_MARKER in result.detail
+    )
+
+
 def read_test_results(reports_dir: Path) -> list[TestResult]:
     results: list[TestResult] = []
     for report_path in sorted(reports_dir.rglob("junit-*.xml")):
@@ -63,6 +72,7 @@ def read_test_results(reports_dir: Path) -> list[TestResult]:
                 is_known_issue = (
                     _base_node_id(node_id) in _KNOWN_ISSUE_NODE_IDS
                     and _KNOWN_ISSUE_MARKER in detail
+                    and detail.startswith("XFAIL:")
                 )
                 status = "KNOWN ISSUE" if is_known_issue else "SKIPPED"
             else:
@@ -95,6 +105,7 @@ def validation_errors(
         f"{result.node_id} ({result.status})"
         for result in results
         if result.status not in {"PASSED", "KNOWN ISSUE"}
+        and not _is_expected_e9_skip(result)
     ]
     if not_passed:
         errors.append("Workbook tests did not pass: " + ", ".join(not_passed))
@@ -118,26 +129,40 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
     failed = sum(result.status in {"FAILED", "ERROR"} for result in results)
     known_issues = sum(result.status == "KNOWN ISSUE" for result in results)
     skipped = sum(result.status == "SKIPPED" for result in results)
+    expected_skips = sum(_is_expected_e9_skip(result) for result in results)
     total_duration = sum(result.duration for result in results)
     pass_rate = round(passed / len(results) * 100) if results else 0
     complete_without_blocking_results = (
-        len(results) == expected_count and failed == 0 and skipped == 0
+        len(results) == expected_count and failed == 0 and skipped == expected_skips
     )
     run_status = "Review results"
     if complete_without_blocking_results:
-        run_status = "Passed with known issue" if known_issues else "All checks passed"
+        if known_issues and expected_skips:
+            run_status = "Passed with known issue and expected skip"
+        elif known_issues:
+            run_status = "Passed with known issue"
+        elif expected_skips:
+            run_status = "Passed with expected skip"
+        else:
+            run_status = "All checks passed"
     run_state_class = (
         "review"
         if not complete_without_blocking_results
         else "known-issue"
-        if known_issues
+        if known_issues or expected_skips
         else ""
     )
-    known_issue_summary = (
-        f" · {known_issues} known issue"
-        f"{'s' if known_issues != 1 else ''}"
-        if known_issues
-        else ""
+    exceptional_summaries = []
+    if known_issues:
+        exceptional_summaries.append(
+            f"{known_issues} known issue{'s' if known_issues != 1 else ''}"
+        )
+    if expected_skips:
+        exceptional_summaries.append(
+            f"{expected_skips} expected skip{'s' if expected_skips != 1 else ''}"
+        )
+    outcome_summary = (
+        " · " + " · ".join(exceptional_summaries) if exceptional_summaries else ""
     )
     categories: dict[str, list[TestResult]] = {}
     for result in results:
@@ -295,7 +320,7 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
   <header class="hero">
     <span class="eyebrow">PLAYWRIGHT · PYTEST · CI QUALITY GATE</span>
     <h1>UI test report</h1>
-    <p>{passed}/{expected_count} expected cases passed{known_issue_summary} · {len(results)} results collected · {total_duration:.1f}s combined test time</p>
+    <p>{passed}/{expected_count} expected cases passed{outcome_summary} · {len(results)} results collected · {total_duration:.1f}s combined test time</p>
     <span class="run-state {run_state_class}">{run_status}</span>
   </header>
   <main>
@@ -375,14 +400,17 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
 def render_markdown(results: list[TestResult], expected_count: int) -> str:
     passed = sum(result.status == "PASSED" for result in results)
     known_issues = sum(result.status == "KNOWN ISSUE" for result in results)
-    known_issue_summary = (
-        f" · {known_issues} known issue"
-        f"{'s' if known_issues != 1 else ''}"
-        if known_issues
-        else ""
-    )
+    skipped = sum(result.status == "SKIPPED" for result in results)
+    summaries = []
+    if known_issues:
+        summaries.append(
+            f"{known_issues} known issue{'s' if known_issues != 1 else ''}"
+        )
+    if skipped:
+        summaries.append(f"{skipped} skipped")
+    outcome_summary = " · " + " · ".join(summaries) if summaries else ""
     lines = [
-        f"## Workbook UI tests: {passed}/{expected_count} passed{known_issue_summary}",
+        f"## Workbook UI tests: {passed}/{expected_count} passed{outcome_summary}",
         "",
         "| Category | Test case | Result | Duration | Details |",
         "|---|---|---:|---:|---|",
@@ -429,9 +457,11 @@ def main() -> int:
         print("\n".join(errors), file=sys.stderr)
         return 1
     known_issues = sum(result.status == "KNOWN ISSUE" for result in results)
+    expected_skips = sum(_is_expected_e9_skip(result) for result in results)
     print(
         f"Validated {expected_count} test results "
-        f"({known_issues} known issue{'s' if known_issues != 1 else ''})."
+        f"({known_issues} known issue{'s' if known_issues != 1 else ''}, "
+        f"{expected_skips} expected skip{'s' if expected_skips != 1 else ''})."
     )
     return 0
 

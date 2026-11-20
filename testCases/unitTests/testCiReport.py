@@ -55,23 +55,30 @@ def testCiReportFlagsSkippedAndDuplicateResults(tmp_path: Path) -> None:
     assert any("SKIPPED" in error for error in errors)
     assert "waiting for QA &#124; test data" in render_markdown(results, 2)
 
-def testCiReportAllowsOnlyKnownE9RepriceIssue(
+def testCiReportAllowsOnlyExpectedE9Skip(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     report_dir = tmp_path / "pytest-report-flight-scenarios"
     report_dir.mkdir()
+    passed_cases = "".join(
+        f'<testcase classname="testCases.endToEndTests.testFlight" '
+        f'name="testFlight{index}" time="1.0" />'
+        for index in range(22)
+    )
     (report_dir / "junit-flight-scenarios.xml").write_text(
-        """<testsuite>
+        f"""<testsuite>
+{passed_cases}
 <testcase classname="testCases.endToEndTests.testFlight"
  name="testE9SelectedFarePersistsToTripSummary[chromium]" time="1.0">
-  <skipped message="XFAIL: KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL: fare was NaN" />
+  <skipped message="Skipped: KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL: fare was NaN" />
 </testcase>
 </testsuite>""",
         encoding="utf-8",
     )
     results = read_test_results(tmp_path)
-    assert [result.status for result in results] == ["KNOWN ISSUE"]
-    assert validation_errors(results, expected_count=1) == []
+    assert [result.status for result in results].count("PASSED") == 22
+    assert [result.status for result in results].count("SKIPPED") == 1
+    assert validation_errors(results, expected_count=23) == []
     html_path = tmp_path / "summary.html"
     markdown_path = tmp_path / "summary.md"
     monkeypatch.setattr(
@@ -86,15 +93,15 @@ def testCiReportAllowsOnlyKnownE9RepriceIssue(
             "--markdown",
             str(markdown_path),
             "--expected-count",
-            "1",
+            "23",
         ],
     )
     assert main() == 0
     html_report = html_path.read_text(encoding="utf-8")
     markdown_report = markdown_path.read_text(encoding="utf-8")
-    assert "Passed with known issue" in html_report
-    assert 'class="status-badge known-issue">KNOWN ISSUE</span>' in html_report
-    assert "0/1 passed · 1 known issue" in markdown_report
+    assert "Passed with expected skip" in html_report
+    assert 'class="status-badge skipped">SKIPPED</span>' in html_report
+    assert "22/23 passed · 1 skipped" in markdown_report
     assert "KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL" in markdown_report
 
 def testCiReportAcceptsExact23CaseLaneBreakdown(tmp_path: Path) -> None:

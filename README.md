@@ -81,10 +81,10 @@ combines JUnit reports from the executed lanes and
 publishes case-by-case results in the GitHub Actions job summary. Push runs
 validate all 23 workbook cases; pull requests run the impacted UI lanes and
 validate the selected results. The report fails if a result is duplicated,
-skipped, or not passed, except for E9 when the site's repricing response
-produces a nonnumeric total. That case is reported as a visible, non-blocking
-known issue; it is not counted as passed. Once the fare is numeric again, E9
-must pass normally.
+skipped, or not passed, except that E9's skip is non-blocking when the site's
+repricing response produces a nonnumeric total. E9 remains visible as skipped
+and is not counted as passed. Once the fare is numeric again, E9 must pass
+normally.
 The HTML/Markdown summary is also uploaded as `pytest-23-case-summary`.
 
 Each authenticated lane creates its own `.authenticationState` directory on its

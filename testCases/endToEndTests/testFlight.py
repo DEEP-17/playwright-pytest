@@ -201,12 +201,12 @@ def testE9SelectedFarePersistsToTripSummary(
     try:
         summary_amount = Decimal(fare_text)
     except InvalidOperation:
-        pytest.xfail(
+        pytest.skip(
             "KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL: "
             f"Trip summary displayed an invalid total fare: {fare_text!r}"
         )
     if not summary_amount.is_finite():
-        pytest.xfail(
+        pytest.skip(
             "KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL: "
             f"Trip summary displayed an invalid total fare: {fare_text!r}"
         )
