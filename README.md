@@ -86,6 +86,8 @@ repricing response produces a nonnumeric total. E9 remains visible as skipped
 and is not counted as passed. Once the fare is numeric again, E9 must pass
 normally.
 The HTML/Markdown summary is also uploaded as `pytest-23-case-summary`.
+When skips exist, `pytest-skipped-cases` is uploaded separately with only
+skipped JUnit cases and a Markdown list of each case and its skip details.
 
 Each authenticated lane creates its own `.authenticationState` directory on its
 runner and verifies that both storage-state files were written. Pytest clears

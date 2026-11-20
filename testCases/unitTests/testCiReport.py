@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import xml.etree.ElementTree as ET
 
 import pytest
 
@@ -10,6 +11,7 @@ from automationScripts.ciReport import (
     render_markdown,
     validation_errors,
 )
+from automationScripts.extractSkippedTests import extract_skipped_tests
 
 def testCiReportReadsAndGroupsJunitResults(tmp_path: Path) -> None:
     report_dir = tmp_path / "pytest-report-flight-scenarios"
@@ -103,6 +105,57 @@ def testCiReportAllowsOnlyExpectedE9Skip(
     assert 'class="status-badge skipped">SKIPPED</span>' in html_report
     assert "22/23 passed · 1 skipped" in markdown_report
     assert "KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL" in markdown_report
+
+
+def testExtractSkippedTestsCreatesDedicatedReports(tmp_path: Path) -> None:
+    report_dir = tmp_path / "pytest-report-flight-scenarios"
+    report_dir.mkdir()
+    (report_dir / "junit-flight-scenarios.xml").write_text(
+        """<testsuite>
+<testcase classname="testCases.endToEndTests.testFlight" name="testPassed" time="1.0" />
+<testcase classname="testCases.endToEndTests.testFlight" name="testE9" time="2.0">
+  <skipped message="KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL: fare was NaN">
+    testFlight.py:209
+  </skipped>
+</testcase>
+</testsuite>""",
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "skipped-tests"
+
+    assert extract_skipped_tests(tmp_path, output_dir) == 1
+
+    junit_root = ET.parse(output_dir / "junit-skipped-tests.xml").getroot()
+    cases = list(junit_root.iter("testcase"))
+    assert len(cases) == 1
+    assert cases[0].get("name") == "testE9"
+    assert cases[0].find("skipped") is not None
+    markdown = (output_dir / "skipped-tests.md").read_text(encoding="utf-8")
+    assert "testE9" in markdown
+    assert "KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL" in markdown
+    assert "testFlight.py:209" in markdown
+
+
+def testExtractSkippedTestsRemovesStaleArtifactWhenNoSkips(
+    tmp_path: Path,
+) -> None:
+    report_dir = tmp_path / "pytest-report-flight-scenarios"
+    report_dir.mkdir()
+    (report_dir / "junit-flight-scenarios.xml").write_text(
+        '<testsuite><testcase name="testPassed" time="1.0" /></testsuite>',
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "skipped-tests"
+    output_dir.mkdir()
+    junit_path = output_dir / "junit-skipped-tests.xml"
+    markdown_path = output_dir / "skipped-tests.md"
+    junit_path.write_text("stale", encoding="utf-8")
+    markdown_path.write_text("stale", encoding="utf-8")
+
+    assert extract_skipped_tests(tmp_path, output_dir) == 0
+    assert not junit_path.exists()
+    assert not markdown_path.exists()
+
 
 def testCiReportAcceptsExact23CaseLaneBreakdown(tmp_path: Path) -> None:
     lane_counts = {
