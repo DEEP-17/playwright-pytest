@@ -88,6 +88,8 @@ normally.
 The HTML/Markdown summary is also uploaded as `pytest-23-case-summary`.
 When skips exist, `pytest-skipped-cases` is uploaded separately with only
 skipped JUnit cases and a Markdown list of each case and its skip details.
+Failed test runs also upload per-lane `pytest-failure-evidence-*` artifacts with
+JUnit/HTML reports, failure logs, screenshots, videos, traces, and Allure results.
 
 Each authenticated lane creates its own `.authenticationState` directory on its
 runner and verifies that both storage-state files were written. Pytest clears

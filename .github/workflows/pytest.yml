@@ -93,11 +93,13 @@ jobs:
         shell: pwsh
         run: New-Item -ItemType Directory -Force "testResults" | Out-Null
       - name: Run unit and browser session tests
+        id: run-tests
         run: >-
           .\.venv\Scripts\python.exe -m pytest -vv -s
           --log-cli-level=DEBUG
           --log-file=testResults/pytest.log
           --log-file-level=DEBUG
+          --junitxml=testResults/junit-preflight.xml
           testCases/unitTests/testCalendarHelper.py
           testCases/unitTests/testSupport.py
           testCases/unitTests/testCiReport.py
@@ -116,6 +118,20 @@ jobs:
         with:
           name: pytest-report-preflight
           path: testResults/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload preflight failure evidence
+        if: always() && steps.run-tests.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pytest-failure-evidence-preflight
+          path: |
+            testResults/junit-preflight.xml
+            testResults/report.html
+            testResults/pytest.log
+            testResults/screenshots/
+            testResults/playwrightArtifacts/
+            testResults/allureResults/
           if-no-files-found: warn
           retention-days: 14
       - name: Remove session state and local logs
@@ -259,6 +275,20 @@ jobs:
           path: testResults/
           if-no-files-found: warn
           retention-days: 14
+      - name: Upload saved-trip failure evidence
+        if: always() && steps.run-tests.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pytest-failure-evidence-saved-trip
+          path: |
+            testResults/junit-saved-trip.xml
+            testResults/report.html
+            testResults/pytest.log
+            testResults/screenshots/
+            testResults/playwrightArtifacts/
+            testResults/allureResults/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Remove session state and local logs
         if: always()
         shell: pwsh
@@ -298,15 +328,15 @@ jobs:
         run: |
           python automationScripts\extractSkippedTests.py `
             --reports-dir testReports `
-            --output-dir testReports\skipped-tests
+            --output-dir skipped-test-artifact
       - name: Upload skipped test-case artifact
-        if: always() && hashFiles('testReports/skipped-tests/junit-skipped-tests.xml') != ''
+        if: always() && hashFiles('skipped-test-artifact/junit-skipped-tests.xml') != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pytest-skipped-cases
           path: |
-            testReports/skipped-tests/junit-skipped-tests.xml
-            testReports/skipped-tests/skipped-tests.md
+            skipped-test-artifact/junit-skipped-tests.xml
+            skipped-test-artifact/skipped-tests.md
           if-no-files-found: error
           retention-days: 14
       - name: Aggregate Allure results

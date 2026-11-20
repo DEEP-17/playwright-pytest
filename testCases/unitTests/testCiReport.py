@@ -108,8 +108,9 @@ def testCiReportAllowsOnlyExpectedE9Skip(
 
 
 def testExtractSkippedTestsCreatesDedicatedReports(tmp_path: Path) -> None:
-    report_dir = tmp_path / "pytest-report-flight-scenarios"
-    report_dir.mkdir()
+    reports_dir = tmp_path / "testReports"
+    report_dir = reports_dir / "pytest-report-flight-scenarios"
+    report_dir.mkdir(parents=True)
     (report_dir / "junit-flight-scenarios.xml").write_text(
         """<testsuite>
 <testcase classname="testCases.endToEndTests.testFlight" name="testPassed" time="1.0" />
@@ -121,9 +122,9 @@ def testExtractSkippedTestsCreatesDedicatedReports(tmp_path: Path) -> None:
 </testsuite>""",
         encoding="utf-8",
     )
-    output_dir = tmp_path / "skipped-tests"
+    output_dir = tmp_path / "skipped-test-artifact"
 
-    assert extract_skipped_tests(tmp_path, output_dir) == 1
+    assert extract_skipped_tests(reports_dir, output_dir) == 1
 
     junit_root = ET.parse(output_dir / "junit-skipped-tests.xml").getroot()
     cases = list(junit_root.iter("testcase"))
@@ -134,25 +135,29 @@ def testExtractSkippedTestsCreatesDedicatedReports(tmp_path: Path) -> None:
     assert "testE9" in markdown
     assert "KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL" in markdown
     assert "testFlight.py:209" in markdown
+    results = read_test_results(reports_dir)
+    assert len(results) == 2
+    assert sum(result.node_id.endswith("::testE9") for result in results) == 1
 
 
 def testExtractSkippedTestsRemovesStaleArtifactWhenNoSkips(
     tmp_path: Path,
 ) -> None:
-    report_dir = tmp_path / "pytest-report-flight-scenarios"
-    report_dir.mkdir()
+    reports_dir = tmp_path / "testReports"
+    report_dir = reports_dir / "pytest-report-flight-scenarios"
+    report_dir.mkdir(parents=True)
     (report_dir / "junit-flight-scenarios.xml").write_text(
         '<testsuite><testcase name="testPassed" time="1.0" /></testsuite>',
         encoding="utf-8",
     )
-    output_dir = tmp_path / "skipped-tests"
+    output_dir = tmp_path / "skipped-test-artifact"
     output_dir.mkdir()
     junit_path = output_dir / "junit-skipped-tests.xml"
     markdown_path = output_dir / "skipped-tests.md"
     junit_path.write_text("stale", encoding="utf-8")
     markdown_path.write_text("stale", encoding="utf-8")
 
-    assert extract_skipped_tests(tmp_path, output_dir) == 0
+    assert extract_skipped_tests(reports_dir, output_dir) == 0
     assert not junit_path.exists()
     assert not markdown_path.exists()
 

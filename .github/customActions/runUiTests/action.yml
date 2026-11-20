@@ -103,6 +103,20 @@ runs:
         path: testResults/
         if-no-files-found: warn
         retention-days: 14
+    - name: Upload failure evidence
+      if: always() && steps.run-tests.outcome == 'failure'
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: pytest-failure-evidence-${{ inputs.case-id }}
+        path: |
+          testResults/junit-${{ inputs.case-id }}.xml
+          testResults/report.html
+          testResults/pytest.log
+          testResults/screenshots/
+          testResults/playwrightArtifacts/
+          testResults/allureResults/
+        if-no-files-found: warn
+        retention-days: 14
     - name: Remove session state and local logs
       if: always()
       shell: pwsh

@@ -5,6 +5,7 @@
 .auth/
 *-state.json
 testResults/
+skipped-test-artifact/
 test-results/
 playwright-report/
 .playwright-mcp/
