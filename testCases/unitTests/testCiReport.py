@@ -179,6 +179,13 @@ def testCiReportAcceptsExact23CaseLaneBreakdown(tmp_path: Path) -> None:
         (report_dir / f"junit-{lane}.xml").write_text(
             f"<testsuite>{cases}</testsuite>", encoding="utf-8"
         )
+    preflight_dir = tmp_path / "pytest-report-preflight"
+    preflight_dir.mkdir()
+    (preflight_dir / "preflight-results.xml").write_text(
+        '<testsuite><testcase classname="testCases.unitTests.testSupport" '
+        'name="testSupport" time="0.1" /></testsuite>',
+        encoding="utf-8",
+    )
     results = read_test_results(tmp_path)
     assert len(results) == 23
     assert validation_errors(results, expected_count=23) == []

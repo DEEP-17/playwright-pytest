@@ -99,7 +99,7 @@ jobs:
           --log-cli-level=DEBUG
           --log-file=testResults/pytest.log
           --log-file-level=DEBUG
-          --junitxml=testResults/junit-preflight.xml
+          --junitxml=testResults/preflight-results.xml
           testCases/unitTests/testCalendarHelper.py
           testCases/unitTests/testSupport.py
           testCases/unitTests/testCiReport.py
@@ -126,7 +126,7 @@ jobs:
         with:
           name: pytest-failure-evidence-preflight
           path: |
-            testResults/junit-preflight.xml
+            testResults/preflight-results.xml
             testResults/report.html
             testResults/pytest.log
             testResults/screenshots/
