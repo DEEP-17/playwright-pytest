@@ -326,7 +326,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          python automationScripts\extractSkippedTests.py `
+          python -m automationScripts.extractSkippedTests `
             --reports-dir testReports `
             --output-dir skipped-test-artifact
       - name: Upload skipped test-case artifact
