@@ -11,8 +11,8 @@ hotel, and trip-planner flows to synchronous Playwright with pytest.
 3. Install the browser with `python -m playwright install chromium`.
 4. Copy `.env.example` to `.env` and set `BASE_URL`, `USER_EMAIL`, and
    `USER_PASSWORD`.
-5. Run the unit checks with `pytest testCases/unitTests`, or run the
-   end-to-end suite with `pytest`.
+5. Run the unit checks with `pytest testCases/unitTests`, or run the 23
+   workbook end-to-end cases with `pytest`.
 
 The end-to-end tests authenticate before each flow. Authentication state files,
 environment files, traces, and test reports are excluded from version control.
@@ -22,7 +22,9 @@ flights and once for hotels. The C14 slow-network scenario is deliberately
 excluded from CI and was not run. Locator-based critical flows are implemented
 in `testCases/endToEndTests/testCriticalFlows.py` and can be selected with
 `pytest -m critical`. Test files and functions use camelCase; pytest discovery
-is configured for the `test*.py` and `test*` naming patterns.
+is configured for the `test*.py` and `test*` naming patterns. Default discovery
+is limited to `testCases/endToEndTests`; unit tests remain explicitly runnable
+and are still included in the CI preflight.
 
 Use `pytest --skip-case C8` to skip a case by workbook ID, or pass a node-id
 fragment such as `pytest --skip-case HotelGuestAge`. Add a reason with
@@ -79,7 +81,10 @@ combines JUnit reports from the executed lanes and
 publishes case-by-case results in the GitHub Actions job summary. Push runs
 validate all 23 workbook cases; pull requests run the impacted UI lanes and
 validate the selected results. The report fails if a result is duplicated,
-skipped, or not passed.
+skipped, or not passed, except for E9 when the site's repricing response
+produces a nonnumeric total. That case is reported as a visible, non-blocking
+known issue; it is not counted as passed. Once the fare is numeric again, E9
+must pass normally.
 The HTML/Markdown summary is also uploaded as `pytest-23-case-summary`.
 
 Each authenticated lane creates its own `.authenticationState` directory on its

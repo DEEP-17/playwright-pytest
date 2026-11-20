@@ -7,6 +7,24 @@ from pageObjectModel.tripPages.tripPlanPage import (
     TripPlanPage,
 )
 from pageObjectModel.tripPages.tripSavedTripsPage import TripSavedTripsPage
+from pageObjectModel.tripPages.tripSearchPage import TripSearchPage
+
+
+def testTripLocationWaitsForAutocompleteWithoutFixedSleep() -> None:
+    page = Mock()
+    textbox = page.get_by_placeholder.return_value
+    option = page.get_by_text.return_value
+
+    TripSearchPage(page)._select_location(
+        "Where are you from?",
+        "amd",
+        "AMD -Sardar Vallabhbhai Patel International AirportAhmedabad, India",
+    )
+
+    textbox.fill.assert_called_once_with("amd")
+    option.wait_for.assert_called_once_with(state="visible", timeout=30_000)
+    option.click.assert_called_once_with(timeout=10_000)
+    page.wait_for_timeout.assert_not_called()
 
 
 def testTripSaveWaitsForApiResponseAndReturnsCreatedTripReference(

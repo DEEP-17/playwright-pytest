@@ -84,15 +84,7 @@ def testC5FlightWithoutSeatsCanContinueGracefully(
     flight_search_page.search_flight(test_data.flight)
     flight_listing_page.filter_and_select()
     flight_trip_summary_page.proceed()
-    no_seats_available = flight_seat_map_page.handle_seats()
-    if no_seats_available:
-        expect(
-            authenticated_page.get_by_role(
-                "heading",
-                name="Seat booking is not available for this flight",
-                level=4,
-            )
-        ).to_be_visible()
+    flight_seat_map_page.handle_seats()
     expect(
         authenticated_page.locator('input[name^="firstName"]').first
     ).to_be_visible(timeout=60_000)

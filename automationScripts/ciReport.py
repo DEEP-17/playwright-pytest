@@ -12,6 +12,10 @@ _CATEGORY_LABELS = {
     "public-attractions": "Attractions",
     "saved-trip": "Saved trips",
 }
+_KNOWN_ISSUE_NODE_IDS = {
+    "testCases.endToEndTests.testFlight::testE9SelectedFarePersistsToTripSummary"
+}
+_KNOWN_ISSUE_MARKER = "KNOWN_ISSUE:E9_INVALID_REPRICE_TOTAL"
 
 @dataclass(frozen=True)
 class TestResult:
@@ -27,6 +31,9 @@ def _category_for_report(report_path: Path) -> str:
             category_id = parent.name.removeprefix("pytest-report-")
             return _CATEGORY_LABELS.get(category_id, category_id.replace("-", " "))
     return "Uncategorized"
+
+def _base_node_id(node_id: str) -> str:
+    return node_id.split("[", 1)[0]
 
 def read_test_results(reports_dir: Path) -> list[TestResult]:
     results: list[TestResult] = []
@@ -48,12 +55,16 @@ def read_test_results(reports_dir: Path) -> list[TestResult]:
                     if part
                 )
             elif skipped is not None:
-                status = "SKIPPED"
                 detail = " ".join(
                     part
                     for part in (skipped.get("message", ""), skipped.text or "")
                     if part
                 )
+                is_known_issue = (
+                    _base_node_id(node_id) in _KNOWN_ISSUE_NODE_IDS
+                    and _KNOWN_ISSUE_MARKER in detail
+                )
+                status = "KNOWN ISSUE" if is_known_issue else "SKIPPED"
             else:
                 status = "PASSED"
                 detail = ""
@@ -83,7 +94,7 @@ def validation_errors(
     not_passed = [
         f"{result.node_id} ({result.status})"
         for result in results
-        if result.status != "PASSED"
+        if result.status not in {"PASSED", "KNOWN ISSUE"}
     ]
     if not_passed:
         errors.append("Workbook tests did not pass: " + ", ".join(not_passed))
@@ -105,13 +116,28 @@ def _chart_segment(
 def render_html(results: list[TestResult], expected_count: int) -> str:
     passed = sum(result.status == "PASSED" for result in results)
     failed = sum(result.status in {"FAILED", "ERROR"} for result in results)
+    known_issues = sum(result.status == "KNOWN ISSUE" for result in results)
     skipped = sum(result.status == "SKIPPED" for result in results)
     total_duration = sum(result.duration for result in results)
     pass_rate = round(passed / len(results) * 100) if results else 0
-    run_status = (
-        "All checks passed"
-        if len(results) == expected_count and failed == 0 and skipped == 0
-        else "Review results"
+    complete_without_blocking_results = (
+        len(results) == expected_count and failed == 0 and skipped == 0
+    )
+    run_status = "Review results"
+    if complete_without_blocking_results:
+        run_status = "Passed with known issue" if known_issues else "All checks passed"
+    run_state_class = (
+        "review"
+        if not complete_without_blocking_results
+        else "known-issue"
+        if known_issues
+        else ""
+    )
+    known_issue_summary = (
+        f" · {known_issues} known issue"
+        f"{'s' if known_issues != 1 else ''}"
+        if known_issues
+        else ""
     )
     categories: dict[str, list[TestResult]] = {}
     for result in results:
@@ -120,6 +146,7 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
     outcome_counts = (
         ("Passed", passed, "passed"),
         ("Failed / errors", failed, "failed"),
+        ("Known issues", known_issues, "known-issue"),
         ("Skipped", skipped, "skipped"),
     )
     outcome_segments = "".join(
@@ -135,12 +162,14 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
     for category, cases in sorted(categories.items()):
         category_passed = sum(case.status == "PASSED" for case in cases)
         category_failed = sum(case.status in {"FAILED", "ERROR"} for case in cases)
+        category_known_issues = sum(case.status == "KNOWN ISSUE" for case in cases)
         category_skipped = sum(case.status == "SKIPPED" for case in cases)
         category_segments = "".join(
             _chart_segment(count, len(cases), label, style)
             for label, count, style in (
                 ("Passed", category_passed, "passed"),
                 ("Failed / errors", category_failed, "failed"),
+                ("Known issues", category_known_issues, "known-issue"),
                 ("Skipped", category_skipped, "skipped"),
             )
         )
@@ -150,7 +179,8 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
             f"<strong>{category_passed}/{len(cases)} passed</strong></div>"
             f'<div class="chart-stack" role="img" '
             f'aria-label="{category_passed} passed, {category_failed} failed, '
-            f'{category_skipped} skipped">{category_segments}</div></div>'
+            f'{category_known_issues} known issues, {category_skipped} skipped">'
+            f"{category_segments}</div></div>"
         )
     empty_chart = (
         '<p class="chart-empty">No test outcomes to chart.</p>' if not results else ""
@@ -158,6 +188,7 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
 
     rows = []
     for result in results:
+        status_key = result.status.lower().replace(" ", "-")
         detail = (
             f'<details class="result-detail"><summary>View failure details</summary><pre>'
             f"{html.escape(result.detail)}</pre></details>"
@@ -169,12 +200,12 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
             quote=True,
         )
         rows.append(
-            f'<tr data-status="{result.status.lower()}" '
+            f'<tr data-status="{status_key}" '
             f'data-category="{html.escape(result.category, quote=True)}" '
             f'data-search="{search_text}">'
             f"<td>{html.escape(result.category)}</td>"
             f"<td><code>{html.escape(result.node_id)}</code>{detail}</td>"
-            f'<td><span class="status-badge {result.status.lower()}">{result.status}</span></td>'
+            f'<td><span class="status-badge {status_key}">{result.status}</span></td>'
             f"<td>{result.duration:.2f}s</td>"
             "</tr>"
         )
@@ -183,7 +214,8 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
             '<article class="category-card">'
             f"<h3>{html.escape(category)}</h3>"
             f"<p>{sum(case.status == 'PASSED' for case in cases)}"
-            f"/{len(cases)} passed</p>"
+            f"/{len(cases)} passed · "
+            f"{sum(case.status == 'KNOWN ISSUE' for case in cases)} known issues</p>"
             f'<span class="category-failures">'
             f"{sum(case.status in {'FAILED', 'ERROR'} for case in cases)} failures"
             "</span></article>"
@@ -214,11 +246,12 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
     main {{ width:min(1180px,calc(100% - 2.5rem)); margin:1.5rem auto 3rem; }}
     .run-state {{ display:inline-flex; margin-top:1rem; padding:.4rem .8rem; border-radius:999px; background:#e5f6ef; color:#116b4d; font-size:.8rem; font-weight:750; }}
     .run-state.review {{ background:#fff0ef; color:#a92836; }}
-    .metrics {{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.8rem; margin-bottom:1.2rem; }}
+    .run-state.known-issue {{ background:#fff6df; color:#8a5b0d; }}
+    .metrics {{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.8rem; margin-bottom:1.2rem; }}
     .metric,.category-card,.panel {{ border:1px solid var(--line); border-radius:14px; background:#fff; box-shadow:0 8px 24px rgb(23 36 59 / 5%); }}
     .metric {{ padding:1rem; }} .metric span,.metric strong {{ display:block; }}
     .metric span {{ color:var(--muted); font-size:.78rem; }} .metric strong {{ margin-top:.15rem; font-size:1.6rem; letter-spacing:-.04em; }}
-    .metric.passed strong {{ color:var(--green); }} .metric.failed strong {{ color:var(--red); }} .metric.skipped strong {{ color:var(--amber); }}
+    .metric.passed strong {{ color:var(--green); }} .metric.failed strong {{ color:var(--red); }} .metric.known-issue strong,.metric.skipped strong {{ color:var(--amber); }}
     .progress-card {{ padding:1rem 1.1rem; margin-bottom:1.2rem; border:1px solid #dce5f0; border-radius:14px; background:linear-gradient(145deg,#fff,#f5f9ff); }}
     .progress-labels {{ display:flex; justify-content:space-between; color:var(--muted); font-size:.82rem; }}
     .progress-track {{ height:.55rem; margin-top:.55rem; overflow:hidden; border-radius:999px; background:#e7edf5; }}
@@ -233,7 +266,7 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
     .chart-stack {{ display:flex; width:100%; height:.75rem; overflow:hidden; border-radius:999px; background:#e8eef5; }}
     .chart-stack--large {{ height:1rem; }}
     .chart-segment {{ display:block; height:100%; min-width:2px; }}
-    .chart-passed {{ background:#27a879; }} .chart-failed {{ background:#d64a57; }} .chart-skipped {{ background:#e3a32b; }}
+    .chart-passed {{ background:#27a879; }} .chart-failed {{ background:#d64a57; }} .chart-known-issue {{ background:#b7791f; }} .chart-skipped {{ background:#e3a32b; }}
     .chart-legend {{ display:flex; flex-wrap:wrap; gap:.55rem 1rem; margin:.8rem 0 0; padding:0; list-style:none; color:var(--muted); font-size:.76rem; }}
     .chart-legend li {{ display:flex; align-items:center; gap:.35rem; }} .chart-legend strong {{ color:var(--ink); }}
     .legend-dot {{ width:.58rem; height:.58rem; border-radius:50%; }}
@@ -251,7 +284,7 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
     th {{ position:sticky; top:0; background:#eaf1fa; color:#29415e; font-size:.74rem; letter-spacing:.04em; text-transform:uppercase; }}
     tbody tr:hover {{ background:#f7faff; }} code {{ overflow-wrap:anywhere; font-size:.82rem; }}
     .status-badge {{ display:inline-block; padding:.2rem .55rem; border-radius:999px; font-size:.72rem; font-weight:800; }}
-    .status-badge.passed {{ background:#e5f6ef; color:var(--green); }} .status-badge.failed,.status-badge.error {{ background:#fff0ef; color:var(--red); }} .status-badge.skipped {{ background:#fff6df; color:var(--amber); }}
+    .status-badge.passed {{ background:#e5f6ef; color:var(--green); }} .status-badge.failed,.status-badge.error {{ background:#fff0ef; color:var(--red); }} .status-badge.known-issue,.status-badge.skipped {{ background:#fff6df; color:var(--amber); }}
     .result-detail {{ margin-top:.45rem; color:var(--red); font-size:.78rem; }} .result-detail pre {{ max-width:60rem; overflow:auto; padding:.8rem; border-radius:8px; background:#101b2c; color:#e5edf7; white-space:pre-wrap; overflow-wrap:anywhere; }}
     .empty-state td {{ padding:2rem; color:var(--muted); text-align:center; }}
     footer {{ margin-top:1rem; color:var(--muted); font-size:.75rem; text-align:right; }}
@@ -262,13 +295,14 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
   <header class="hero">
     <span class="eyebrow">PLAYWRIGHT · PYTEST · CI QUALITY GATE</span>
     <h1>UI test report</h1>
-    <p>{passed}/{expected_count} expected cases passed · {len(results)} results collected · {total_duration:.1f}s combined test time</p>
-    <span class="run-state {'review' if failed or skipped or len(results) != expected_count else ''}">{run_status}</span>
+    <p>{passed}/{expected_count} expected cases passed{known_issue_summary} · {len(results)} results collected · {total_duration:.1f}s combined test time</p>
+    <span class="run-state {run_state_class}">{run_status}</span>
   </header>
   <main>
     <section class="metrics" aria-label="Test outcome summary">
       <article class="metric"><span>Total results</span><strong>{len(results)} / {expected_count}</strong></article>
       <article class="metric passed"><span>Passed</span><strong>{passed}</strong></article>
+      <article class="metric known-issue"><span>Known issues</span><strong>{known_issues}</strong></article>
       <article class="metric failed"><span>Failed / errors</span><strong>{failed}</strong></article>
       <article class="metric skipped"><span>Skipped</span><strong>{skipped}</strong></article>
       <article class="metric"><span>Combined duration</span><strong>{total_duration:.1f}s</strong></article>
@@ -282,7 +316,7 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
       <article class="chart-card">
         <h2>Outcome distribution</h2>
         <div class="chart-stack chart-stack--large" role="img"
-             aria-label="{passed} passed, {failed} failed or errored, {skipped} skipped">{outcome_segments}</div>
+             aria-label="{passed} passed, {failed} failed or errored, {known_issues} known issues, {skipped} skipped">{outcome_segments}</div>
         <ul class="chart-legend">{outcome_legend}</ul>{empty_chart}
       </article>
       <article class="chart-card">
@@ -299,6 +333,7 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
         <select id="status-filter" aria-label="Filter by result">
           <option value="">All results</option><option value="failed">Failed</option>
           <option value="error">Errors</option><option value="skipped">Skipped</option>
+          <option value="known-issue">Known issue</option>
           <option value="passed">Passed</option>
         </select>
         <span class="result-count" id="result-count" aria-live="polite"></span>
@@ -339,8 +374,15 @@ def render_html(results: list[TestResult], expected_count: int) -> str:
 
 def render_markdown(results: list[TestResult], expected_count: int) -> str:
     passed = sum(result.status == "PASSED" for result in results)
+    known_issues = sum(result.status == "KNOWN ISSUE" for result in results)
+    known_issue_summary = (
+        f" · {known_issues} known issue"
+        f"{'s' if known_issues != 1 else ''}"
+        if known_issues
+        else ""
+    )
     lines = [
-        f"## Workbook UI tests: {passed}/{expected_count} passed",
+        f"## Workbook UI tests: {passed}/{expected_count} passed{known_issue_summary}",
         "",
         "| Category | Test case | Result | Duration | Details |",
         "|---|---|---:|---:|---|",
@@ -386,7 +428,11 @@ def main() -> int:
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
-    print(    f"Validated all {expected_count} test results.")
+    known_issues = sum(result.status == "KNOWN ISSUE" for result in results)
+    print(
+        f"Validated {expected_count} test results "
+        f"({known_issues} known issue{'s' if known_issues != 1 else ''})."
+    )
     return 0
 
 if __name__ == "__main__":

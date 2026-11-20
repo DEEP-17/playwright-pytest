@@ -7,14 +7,13 @@ class TripSearchPage(BasePage):
         textbox = self.page.get_by_placeholder(search_label, exact=True)
         textbox.click()
         textbox.fill(query)
-        self.page.wait_for_timeout(1_000)
         option = self.page.get_by_text(selection, exact=True)
         try:
-            option.wait_for(state="visible", timeout=2_000)
+            option.wait_for(state="visible", timeout=30_000)
         except PlaywrightTimeoutError as error:
             raise RuntimeError(f"Location was not found: {selection}") from error
         try:
-            option.click(timeout=3_000)
+            option.click(timeout=10_000)
         except PlaywrightTimeoutError as error:
             raise RuntimeError(f"Cannot select location: {selection}") from error
 
