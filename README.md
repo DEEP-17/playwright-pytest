@@ -136,6 +136,7 @@ lanes, and uploads JSON/Markdown reports as the
 `pull-request-impact-analysis` artifact. If impact analysis fails, all UI lanes
 run as a safe fallback. Shared configuration, fixtures, data, helper, and
 hook changes conservatively impact the full test suite.
+Documentation-only changes should report no impacted tests.
 
 ## Project layout
 

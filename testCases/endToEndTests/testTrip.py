@@ -37,7 +37,6 @@ def testE13SavedItineraryRemainsInSavedTrips(
     assert authenticated_page is home_page.page
     saved_trips_tab = home_page.open_saved_trips()
     saved_trips_page = TripSavedTripsPage(saved_trips_tab)
-    existing_trip_count = saved_trips_page.saved_trip_count()
     planner_tab = saved_trips_page.create_trip_planner()
     TripPlannerPage(planner_tab).dismiss_popup()
     fresh_trip = replace(
@@ -51,10 +50,7 @@ def testE13SavedItineraryRemainsInSavedTrips(
         lambda: trip_plan_page.delete_saved_trip(created_trip)
     )
     trip_plan_page.save_current_state("trip-planned-state.json")
-    saved_trips_page.reload_and_wait_for_plans()
-    expect(
-        saved_trips_tab.get_by_role("button", name="Delete")
-    ).to_have_count(existing_trip_count + 1, timeout=30_000)
+    saved_trips_page.reload_and_wait_for_plans(created_trip.plan_id)
 
 @pytest.mark.regression
 def testE14DeleteOldTripCreateFreshTripAndVerifyAfterRefresh(
