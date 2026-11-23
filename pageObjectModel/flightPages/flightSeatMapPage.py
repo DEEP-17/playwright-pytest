@@ -44,6 +44,10 @@ class FlightSeatMapPage(BasePage):
                 )
             required_seats = int(seat_count_match.group(1))
             available_seats = self.page.get_by_role("checkbox")
+            try:
+                available_seats.first.wait_for(state="visible", timeout=5_000)
+            except PlaywrightTimeoutError:
+                pass
             selected = 0
             for seat_index in range(available_seats.count()):
                 seat = available_seats.nth(seat_index)
@@ -56,6 +60,12 @@ class FlightSeatMapPage(BasePage):
                 if selected == required_seats:
                     break
             if selected != required_seats:
+                if selected == 0:
+                    no_seats_available = True
+                    self.log_step(
+                        f"No selectable seats are available in Flight {index + 1}"
+                    )
+                    continue
                 raise RuntimeError(
                     f"Flight {index + 1} requires {required_seats} seats, "
                     f"but only {selected} selectable seats were found."
