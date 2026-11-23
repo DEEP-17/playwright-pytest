@@ -34,14 +34,14 @@ class FlightTripSummaryPage(BasePage):
                     ) from error
             else:
                 self.log_step(
-                    "Checkout button is not ready; reloading trip summary once"
+                    "Trip summary is still loading; waiting for checkout"
                 )
-                self.page.reload(wait_until="domcontentloaded")
                 try:
-                    continue_button.wait_for(state="visible", timeout=20_000)
+                    continue_button.wait_for(state="visible", timeout=40_000)
                 except PlaywrightTimeoutError as error:
                     raise RuntimeError(
-                        f"Continue to Checkout button did not load at {self.page.url}"
+                        "Continue to Checkout button did not load after "
+                        f"60 seconds at {self.page.url}"
                     ) from error
         self.log_step("Continuing to checkout")
         continue_button.click()

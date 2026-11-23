@@ -110,6 +110,7 @@ jobs:
           testCases/unitTests/testLogging.py
           testCases/unitTests/testReportHooks.py
           testCases/unitTests/testHotelPage.py
+          testCases/unitTests/testFlightTripSummaryPage.py
           testCases/unitTests/testTripPage.py
           testCases/unitTests/testAllureReportViewer.py
       - name: Upload pytest report and browser artifacts
