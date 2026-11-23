@@ -18,7 +18,9 @@ class TripSavedTripsPage(BasePage):
             and urlsplit(response.url).path.startswith("/api/v1/get_user_plan/")
         )
 
-    def reload_and_wait_for_plans(self) -> None:
+    def reload_and_wait_for_plans(
+        self, expected_trip_id: str | None = None
+    ) -> None:
         with self.page.expect_response(
             self.is_user_plans_response, timeout=60_000
         ) as response_info:
@@ -28,9 +30,11 @@ class TripSavedTripsPage(BasePage):
             raise RuntimeError(
                 f"Loading saved trips failed with HTTP {response.status}."
             )
-        self.wait_for_plans(response)
+        self.wait_for_plans(response, expected_trip_id)
 
-    def wait_for_plans(self, response: Response) -> None:
+    def wait_for_plans(
+        self, response: Response, expected_trip_id: str | None = None
+    ) -> None:
         payload = response.json()
         if not isinstance(payload, dict):
             raise RuntimeError("The saved-trips response was not a JSON object.")
@@ -40,6 +44,13 @@ class TripSavedTripsPage(BasePage):
             ai_trip_plans, list
         ):
             raise RuntimeError("The saved-trips response had an invalid plan list.")
+        if expected_trip_id is not None and not any(
+            isinstance(plan, dict) and plan.get("_id") == expected_trip_id
+            for plan in new_trip_plans + ai_trip_plans
+        ):
+            raise AssertionError(
+                f"Saved-trips response did not contain trip {expected_trip_id!r}."
+            )
         expect(
             self.page.get_by_role("button", name="Delete")
         ).to_have_count(len(new_trip_plans) + len(ai_trip_plans), timeout=60_000)

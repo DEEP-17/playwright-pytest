@@ -143,7 +143,7 @@ def testSavedTripPageWaitsUntilApiPlansAreRendered(
     page = Mock()
     response = Mock()
     response.json.return_value = {
-        "newTripPlan": [{}, {}],
+        "newTripPlan": [{"_id": "expected-plan-id"}, {}],
         "AITripPlanResponse": [{}],
     }
     count_assertion = Mock()
@@ -152,7 +152,25 @@ def testSavedTripPageWaitsUntilApiPlansAreRendered(
         lambda _: count_assertion,
     )
 
-    TripSavedTripsPage(page).wait_for_plans(response)
+    TripSavedTripsPage(page).wait_for_plans(
+        response, expected_trip_id="expected-plan-id"
+    )
 
     page.get_by_role.assert_called_once_with("button", name="Delete")
     count_assertion.to_have_count.assert_called_once_with(3, timeout=60_000)
+
+
+def testSavedTripPageFailsWhenExpectedTripIsMissing() -> None:
+    page = Mock()
+    response = Mock()
+    response.json.return_value = {
+        "newTripPlan": [{"_id": "different-plan-id"}],
+        "AITripPlanResponse": [],
+    }
+
+    with pytest.raises(
+        AssertionError, match="expected-plan-id"
+    ):
+        TripSavedTripsPage(page).wait_for_plans(
+            response, expected_trip_id="expected-plan-id"
+        )
