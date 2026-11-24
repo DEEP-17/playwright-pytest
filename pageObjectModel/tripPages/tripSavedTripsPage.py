@@ -18,6 +18,13 @@ class TripSavedTripsPage(BasePage):
             and urlsplit(response.url).path.startswith("/api/v1/get_user_plan/")
         )
 
+    @staticmethod
+    def is_delete_plan_response(response: Response) -> bool:
+        return (
+            response.request.method == "DELETE"
+            and "/delete/" in urlsplit(response.url).path
+        )
+
     def reload_and_wait_for_plans(
         self, expected_trip_id: str | None = None
     ) -> None:
@@ -59,20 +66,22 @@ class TripSavedTripsPage(BasePage):
         self._wait_for_saved_trips()
         return self.page.get_by_role("button", name="Delete").count()
 
-    def delete_first_trip(self) -> int:
+    def delete_first_trip(self) -> None:
         self._wait_for_saved_trips()
         self.save_current_state("saved-trips-state.json")
         delete_button = self.page.get_by_role("button", name="Delete").first
-        initial_count = self.saved_trip_count()
-        if initial_count == 0:
-            raise RuntimeError("Cannot delete a saved trip: no saved trips exist.")
-        self.page.once("dialog", lambda dialog: dialog.accept())
-        delete_button.click(force=True)
-        self.log_step("Old trip deletion requested.")
-        expect(
-            self.page.get_by_role("button", name="Delete")
-        ).to_have_count(initial_count - 1, timeout=30_000)
-        return initial_count
+        delete_button.wait_for(state="visible", timeout=30_000)
+        with self.page.expect_response(
+            self.is_delete_plan_response, timeout=30_000
+        ) as response_info:
+            self.page.once("dialog", lambda dialog: dialog.accept())
+            delete_button.click(force=True)
+        response = response_info.value
+        if not response.ok:
+            raise RuntimeError(
+                f"Deleting a saved trip failed with HTTP {response.status}."
+            )
+        self.log_step("Old trip deletion confirmed.")
 
     def create_trip_planner(self) -> Page:
         self._wait_for_saved_trips()

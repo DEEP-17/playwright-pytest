@@ -4,6 +4,16 @@ from testData.testDataObjects import HotelData
 from pageObjectModel.basePage.basePage import BasePage
 
 class HotelSearchPage(BasePage):
+    def _select_location(self, query: str, selection: str) -> None:
+        self.page.get_by_role(
+            "textbox", name="What hotel you looking for?"
+        ).fill(query)
+        location_option = self.page.locator("div").filter(
+            has_text=re.compile(rf"^{re.escape(selection)}$")
+        ).first
+        location_option.wait_for(state="visible", timeout=30_000)
+        location_option.click(timeout=10_000)
+
     def search(
         self,
         data: HotelData,
@@ -16,13 +26,7 @@ class HotelSearchPage(BasePage):
             raise ValueError("Hotel searches require at least one room.")
 
         expect(self.page).to_have_url(re.compile(r".*hotel/search"))
-        self.page.get_by_role(
-            "textbox", name="What hotel you looking for?"
-        ).fill(data.location_query)
-        self.page.wait_for_timeout(2_000)
-        self.page.locator("div").filter(
-            has_text=re.compile(rf"^{re.escape(data.location_option)}$")
-        ).first.click()
+        self._select_location(data.location_query, data.location_option)
         self.page.get_by_role("button", name="showing selected date").click()
         check_in = data.check_in_days_from_today
         stay_length = data.stay_length_days
