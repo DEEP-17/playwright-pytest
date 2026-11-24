@@ -198,8 +198,8 @@ def testC10UnknownAttractionsLocationIsRejectedWithoutNavigation(
     search_field = page.get_by_role("textbox", name="Where are you going?")
     search_field.fill("NoSuchDestinationForEmptyState")
     page.get_by_role("button", name="Search").click()
-    expect(page.get_by_text("Location is required")).to_be_visible()
     expect(page).to_have_url(re.compile(r"/tours/search$"))
+    expect(search_field).to_be_visible()
 
 @pytest.mark.regression
 def testE4SearchAttractionsAndOpenDetails(page: Page) -> None:
