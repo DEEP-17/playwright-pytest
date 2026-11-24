@@ -33,6 +33,17 @@ def testE2HotelBookingFlow(
         HotelGuestInfoPage(hotel_page).fill_info(
             hotel_data, settings.user_email
         )
+        expect(
+            hotel_page.locator('input[name="email"]')
+        ).to_be_visible()
+        assert hotel_page.locator('input[name="email"]').input_value() == settings.user_email, (
+            "Hotel guest info email field was not filled correctly."
+        )
+    else:
+        sold_out_or_unavailable = hotel_page.get_by_text(
+            re.compile(r"sold out|unavailable|search other hotels", re.IGNORECASE)
+        )
+        expect(sold_out_or_unavailable.first).to_be_visible()
 
 @pytest.mark.regression
 def testE10HotelRoomAndGuestCountArePreserved(

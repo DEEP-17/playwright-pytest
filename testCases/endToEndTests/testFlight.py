@@ -37,6 +37,12 @@ def testE1FlightBookingFlow(
     if not settings.user_email:
         pytest.fail("USER_EMAIL is required for the flight booking flow.")
     flight_traveller_info_page.fill_info(flight_data, settings.user_email)
+    expect(
+        authenticated_page.locator('input[name^="firstName"]').first
+    ).to_be_visible()
+    assert authenticated_page.url.__contains__("travellerinfo"), (
+        "Flight booking flow did not reach the traveller info page."
+    )
 
 @pytest.mark.regression
 def testE5BusinessClassFlightSearch(

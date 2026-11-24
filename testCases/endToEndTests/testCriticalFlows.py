@@ -141,6 +141,9 @@ def testC8HotelSoldOutOrPriceErrorHasARecoveryState(
             re.compile(r"sold out|search other hotels", re.IGNORECASE)
         )
         expect(recovery_message.first).to_be_visible()
+        assert recovery_message.first.is_visible(), (
+            "Hotel sold-out page did not display a recovery message."
+        )
         return
 
     detail_page.locator("button").filter(has_text="Book Now").first.click()
@@ -164,6 +167,16 @@ def testC8HotelSoldOutOrPriceErrorHasARecoveryState(
                 re.compile(r"sold out|search other hotels", re.IGNORECASE)
             )
             expect(recovery_message.first).to_be_visible()
+        else:
+            expect(proceed_to_pay).to_be_visible()
+            assert proceed_to_pay.is_visible(), (
+                "Hotel booking did not reach the Proceed to Pay step."
+            )
+    else:
+        expect(price_error).to_be_visible()
+        assert price_error.is_visible(), (
+            "Hotel price error message was expected but not visible."
+        )
 
 @pytest.mark.critical
 @pytest.mark.regression

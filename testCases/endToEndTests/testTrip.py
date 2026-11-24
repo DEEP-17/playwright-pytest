@@ -51,6 +51,12 @@ def testE13SavedItineraryRemainsInSavedTrips(
     )
     trip_plan_page.save_current_state("trip-planned-state.json")
     saved_trips_page.reload_and_wait_for_plans(created_trip.plan_id)
+    expect(
+        saved_trips_tab.get_by_role("button", name="Delete").first
+    ).to_be_visible()
+    assert saved_trips_page.saved_trip_count() >= 1, (
+        "Saved trips page did not show the newly created trip after reload."
+    )
 
 @pytest.mark.regression
 def testE14DeleteOldTripCreateFreshTripAndVerifyAfterRefresh(
@@ -76,3 +82,9 @@ def testE14DeleteOldTripCreateFreshTripAndVerifyAfterRefresh(
         lambda: trip_plan_page.delete_saved_trip(created_trip)
     )
     saved_trips_page.reload_and_wait_for_plans(created_trip.plan_id)
+    expect(
+        saved_trips_tab.get_by_role("button", name="Delete").first
+    ).to_be_visible()
+    assert saved_trips_page.saved_trip_count() >= 1, (
+        "Saved trips page did not show the newly created trip after reload."
+    )

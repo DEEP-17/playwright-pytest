@@ -4,7 +4,22 @@ from playwright.sync_api import Locator, Page, expect
 from testData.testDataObjects import FlightData
 from pageObjectModel.basePage.basePage import BasePage
 
+
 class FlightSearchPage(BasePage):
+    def __init__(self, page: Page) -> None:
+        super().__init__(page)
+        # --- Locators ---
+        self.departing_from_field = page.get_by_role("textbox", name="Departing from?")
+        self.going_to_field = page.get_by_role("textbox", name="Going to?")
+        self.one_way_date_button = page.locator("#date")
+        self.round_trip_date_button = page.get_by_role("button", name="showing selected date")
+        self.economy_button = page.get_by_role("button", name="Economy", exact=True)
+        self.search_button = page.get_by_role("button", name="Search")
+        self.passenger_count_button = page.get_by_role("button", name=re.compile(r"\d+ Passenger"))
+        self.multi_city_tab = page.get_by_role("tab", name="Multi city")
+        self.multi_city_panel = page.get_by_role("tabpanel", name="Multi city")
+
+    # --- Actions ---
     def search_flight(
         self,
         data: FlightData,
@@ -17,30 +32,20 @@ class FlightSearchPage(BasePage):
         expect(self.page).to_have_url(re.compile(r".*flights/search"))
         self.page.get_by_role("tab", name=trip_type).click()
         self.log_step("Selecting departure airport")
-        self._select_airport(
-            self.page.get_by_role("textbox", name="Departing from?"),
-            data.origin_query,
-            data.origin_option,
-        )
+        self._select_airport(self.departing_from_field, data.origin_query, data.origin_option)
         self.log_step("Selecting destination airport")
-        self._select_airport(
-            self.page.get_by_role("textbox", name="Going to?"),
-            data.destination_query,
-            data.destination_option,
-        )
+        self._select_airport(self.going_to_field, data.destination_query, data.destination_option)
         self.log_step("Selecting departure date")
         if trip_type == "One way":
-            self.page.locator("#date").click()
+            self.one_way_date_button.click()
         else:
-            self.page.get_by_role(
-                "button", name="showing selected date"
-            ).click()
+            self.round_trip_date_button.click()
         self.select_calendar_date(data.departure_days_from_today)
         if trip_type == "Round trip":
             self.select_calendar_date(data.departure_days_from_today + 2)
             self.page.keyboard.press("Escape")
         self.log_step(f"Selecting {cabin_class} cabin")
-        self.page.get_by_role("button", name="Economy", exact=True).click()
+        self.economy_button.click()
         self.page.get_by_role("menuitem", name=cabin_class, exact=True).click()
         expect(
             self.page.get_by_role("button", name=cabin_class, exact=True)
@@ -48,33 +53,25 @@ class FlightSearchPage(BasePage):
         if passenger_counts is not None:
             self.set_passenger_counts(*passenger_counts)
         self.log_step("Submitting flight search")
-        self.page.get_by_role("button", name="Search").click()
+        self.search_button.click()
         self.save_current_state("flight-search-submitted-state.json")
         self.log_step("Flight search submitted")
 
     def search_multi_city(self, data: FlightData) -> None:
         self.log_step("Starting multi-city flight search")
         expect(self.page).to_have_url(re.compile(r".*flights/search"))
-        self.page.get_by_role("tab", name="Multi city").click()
-        panel = self.page.get_by_role("tabpanel", name="Multi city")
+        self.multi_city_tab.click()
+        panel = self.multi_city_panel
         origin_fields = panel.get_by_role("textbox", name="Departing from?")
         destination_fields = panel.get_by_role("textbox", name="Going to?")
-        self._select_airport(
-            origin_fields.nth(0), data.origin_query, data.origin_option
-        )
-        self._select_airport(
-            destination_fields.nth(0),
-            data.destination_query,
-            data.destination_option,
-        )
+        self._select_airport(origin_fields.nth(0), data.origin_query, data.origin_option)
+        self._select_airport(destination_fields.nth(0), data.destination_query, data.destination_option)
         self._select_multi_city_date(panel, 0, data.departure_days_from_today)
         panel.get_by_role("button", name="+ Add another flight").click()
         expect(origin_fields.nth(1)).to_have_value(
             re.compile(r"(Toronto.*YYZ|YYZ.*Toronto)", re.IGNORECASE)
         )
-        self._select_airport(
-            destination_fields.nth(1), data.origin_query, data.origin_option
-        )
+        self._select_airport(destination_fields.nth(1), data.origin_query, data.origin_option)
         self._select_multi_city_date(panel, 1, data.departure_days_from_today + 2)
         expect(origin_fields).to_have_count(2)
         expect(destination_fields).to_have_count(2)
@@ -86,25 +83,19 @@ class FlightSearchPage(BasePage):
     ) -> None:
         if adults < 1 or children < 0 or infants < 0:
             raise ValueError("Flight searches require at least one adult.")
-        self.page.get_by_role("button", name=re.compile(r"\d+ Passenger")).click()
+        self.passenger_count_button.click()
         for passenger_type, expected_count in (
             ("adults", adults),
             ("children", children),
             ("infants", infants),
         ):
-            row = self.page.get_by_text(passenger_type, exact=True).locator(
-                "xpath=../.."
-            )
-            count_text = row.locator("div").filter(
-                has_text=re.compile(r"^\d+$")
-            ).last
+            row = self.page.get_by_text(passenger_type, exact=True).locator("xpath=../..")
+            count_text = row.locator("div").filter(has_text=re.compile(r"^\d+$")).last
             current_count = int(count_text.inner_text())
             while current_count != expected_count:
                 button_index = 1 if current_count < expected_count else 0
                 row.get_by_role("button").nth(button_index).click()
-                count_text = row.locator("div").filter(
-                    has_text=re.compile(r"^\d+$")
-                ).last
+                count_text = row.locator("div").filter(has_text=re.compile(r"^\d+$")).last
                 updated_count = int(count_text.inner_text())
                 if updated_count == current_count:
                     raise RuntimeError(
@@ -119,9 +110,7 @@ class FlightSearchPage(BasePage):
             )
         ).to_be_visible()
 
-    def _select_airport(
-        self, field: Locator, query: str, option: str
-    ) -> None:
+    def _select_airport(self, field: Locator, query: str, option: str) -> None:
         field.fill(query)
         suggestion = self.page.locator("div").filter(
             has_text=re.compile(rf"^{re.escape(option)}$")
@@ -129,9 +118,7 @@ class FlightSearchPage(BasePage):
         suggestion.wait_for(state="visible", timeout=30_000)
         suggestion.click()
 
-    def _select_multi_city_date(
-        self, panel: Locator, index: int, days_ahead: int
-    ) -> None:
+    def _select_multi_city_date(self, panel: Locator, index: int, days_ahead: int) -> None:
         date_buttons = panel.get_by_role(
             "button", name=re.compile(r"^\d{1,2} [A-Z][a-z]{2} \d{4}$")
         )

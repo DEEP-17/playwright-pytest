@@ -2,7 +2,15 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 from testData.testDataObjects import TripData
 from pageObjectModel.basePage.basePage import BasePage
 
+
 class TripSearchPage(BasePage):
+    def __init__(self, page: Page) -> None:
+        super().__init__(page)
+        # --- Locators ---
+        self.date_picker_button = page.get_by_role("button", name="showing selected date")
+        self.start_planning_button = page.get_by_role("button", name="Start Planning")
+
+    # --- Actions ---
     def _select_location(self, search_label: str, query: str, selection: str) -> None:
         textbox = self.page.get_by_placeholder(search_label, exact=True)
         textbox.click()
@@ -26,13 +34,13 @@ class TripSearchPage(BasePage):
             data.destination_query,
             data.destination_option,
         )
-        self.page.get_by_role("button", name="showing selected date").click()
+        self.date_picker_button.click()
         start_days = data.start_days_from_today
         trip_length = data.trip_length_days
         self.select_calendar_date(start_days)
         self.select_calendar_date(start_days + trip_length)
         with self.page.expect_popup(timeout=10_000) as popup:
-            self.page.get_by_role("button", name="Start Planning").click()
+            self.start_planning_button.click()
         planner_page = popup.value
         self.save_current_state("trip-planning-search-state.json")
         return planner_page
