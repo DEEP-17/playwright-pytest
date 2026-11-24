@@ -4,9 +4,10 @@ from pageObjectModel.basePage.basePage import BasePage
 class TripPlannerPage(BasePage):
     def dismiss_popup(self) -> None:
         self.wait_for_dom()
-        self.page.wait_for_timeout(2_000)
         popup_image = self.page.locator('img[src*="Group 369"]:visible').first
-        if not popup_image.count():
+        try:
+            popup_image.wait_for(state="visible", timeout=10_000)
+        except PlaywrightTimeoutError:
             self.page.wait_for_url(
                 "**/tripplanner/personal-trip/search", timeout=30_000
             )

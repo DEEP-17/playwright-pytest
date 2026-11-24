@@ -15,7 +15,6 @@ class LoginPage(BasePage):
         self.page.get_by_role("checkbox", name="Remember me").check()
         self.log_step("Submitting login")
         self.page.get_by_role("button", name="Sign In").click()
-        self.wait_for_network()
         expect(self.page).not_to_have_url(
             re.compile(r".*/login(?:[?#].*)?$"), timeout=15_000
         )

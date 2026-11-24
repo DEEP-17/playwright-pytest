@@ -118,22 +118,22 @@ def testBrowserWarningsAndErrorsAreQuietButRetainedInDiagnostics(
     try:
         attach_browser_diagnostics(page, request.node)
         with caplog.at_level(logging.INFO):
-            page.evaluate(
-                """() => {
-                    console.warn(
-                        "Mixed Content: The page was loaded over HTTPS, but requested "
-                        + "an insecure element. This request was automatically upgraded "
-                        + "to HTTPS."
-                    );
-                    console.warn("An unrelated browser warning.");
-                    console.error("An application console error.");
-                    setTimeout(
-                        () => { throw new Error("An uncaught page error."); },
-                        0
-                    );
-                }"""
-            )
-            page.wait_for_timeout(25)
+            with page.expect_event("pageerror", timeout=5_000):
+                page.evaluate(
+                    """() => {
+                        console.warn(
+                            "Mixed Content: The page was loaded over HTTPS, but requested "
+                            + "an insecure element. This request was automatically upgraded "
+                            + "to HTTPS."
+                        );
+                        console.warn("An unrelated browser warning.");
+                        console.error("An application console error.");
+                        setTimeout(
+                            () => { throw new Error("An uncaught page error."); },
+                            0
+                        );
+                    }"""
+                )
     finally:
         page.close()
     diagnostics = request.node.stash[BROWSER_DIAGNOSTICS]

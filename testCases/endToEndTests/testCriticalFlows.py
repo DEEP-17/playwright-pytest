@@ -194,7 +194,7 @@ def testC9HotelGuestAgeIsRequiredAndValidated(
 def testC10UnknownAttractionsLocationIsRejectedWithoutNavigation(
     page: Page,
 ) -> None:
-    page.goto("/tours/search", wait_until="networkidle")
+    page.goto("/tours/search", wait_until="domcontentloaded")
     search_field = page.get_by_role("textbox", name="Where are you going?")
     search_field.fill("NoSuchDestinationForEmptyState")
     page.get_by_role("button", name="Search").click()
@@ -203,7 +203,7 @@ def testC10UnknownAttractionsLocationIsRejectedWithoutNavigation(
 
 @pytest.mark.regression
 def testE4SearchAttractionsAndOpenDetails(page: Page) -> None:
-    page.goto("/tours/search", wait_until="networkidle")
+    page.goto("/tours/search", wait_until="domcontentloaded")
     expect(
         page.get_by_role("heading", name="Search attractions")
     ).to_be_visible()

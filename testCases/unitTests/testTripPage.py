@@ -1,11 +1,13 @@
 from unittest.mock import Mock
 
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pageObjectModel.tripPages.tripPlanPage import (
     SavedTripReference,
     TripPlanPage,
 )
+from pageObjectModel.tripPages.tripPlannerPage import TripPlannerPage
 from pageObjectModel.tripPages.tripSavedTripsPage import TripSavedTripsPage
 from pageObjectModel.tripPages.tripSearchPage import TripSearchPage
 
@@ -24,6 +26,25 @@ def testTripLocationWaitsForAutocompleteWithoutFixedSleep() -> None:
     textbox.fill.assert_called_once_with("amd")
     option.wait_for.assert_called_once_with(state="visible", timeout=30_000)
     option.click.assert_called_once_with(timeout=10_000)
+    page.wait_for_timeout.assert_not_called()
+
+
+def testTripPlannerWaitsForPopupOrSearchRoute(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    page = Mock()
+    popup_image = page.locator.return_value.first
+    popup_image.wait_for.side_effect = PlaywrightTimeoutError("timeout")
+    monkeypatch.setattr(TripPlannerPage, "save_current_state", lambda *_: None)
+
+    TripPlannerPage(page).dismiss_popup()
+
+    popup_image.wait_for.assert_called_once_with(
+        state="visible", timeout=10_000
+    )
+    page.wait_for_url.assert_called_once_with(
+        "**/tripplanner/personal-trip/search", timeout=30_000
+    )
     page.wait_for_timeout.assert_not_called()
 
 
@@ -104,6 +125,34 @@ def testSavedTripNavigationWaitsForUrlWithoutNetworkIdle(
     page.wait_for_url.assert_called_once_with(
         "**/tripplanner/saved-trips", timeout=30_000
     )
+
+
+def testDeleteFirstTripWaitsForSuccessfulDeleteResponse(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    page = Mock()
+    response = Mock(
+        ok=True,
+        status=200,
+        request=Mock(method="DELETE"),
+        url="https://api.example.test/api/v1/delete/old-plan-id",
+    )
+    response_context = Mock()
+    response_context.__enter__ = Mock(return_value=response_context)
+    response_context.__exit__ = Mock(return_value=False)
+    response_context.value = response
+    page.expect_response.return_value = response_context
+    saved_trips_page = TripSavedTripsPage(page)
+    monkeypatch.setattr(saved_trips_page, "_wait_for_saved_trips", lambda: None)
+    monkeypatch.setattr(saved_trips_page, "save_current_state", lambda *_: None)
+
+    saved_trips_page.delete_first_trip()
+
+    page.expect_response.assert_called_once_with(
+        TripSavedTripsPage.is_delete_plan_response, timeout=30_000
+    )
+    assert TripSavedTripsPage.is_delete_plan_response(response)
+    page.get_by_role.return_value.first.click.assert_called_once_with(force=True)
 
 
 def testSavedTripReloadWaitsForPlanResponse(

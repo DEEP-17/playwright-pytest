@@ -3,6 +3,24 @@ from unittest.mock import Mock
 import pytest
 
 from pageObjectModel.hotelPages.hotelDetailPage import HotelDetailPage
+from pageObjectModel.hotelPages.hotelSearchPage import HotelSearchPage
+
+
+def testHotelLocationWaitsForAutocompleteWithoutFixedSleep() -> None:
+    page = Mock()
+    textbox = page.get_by_role.return_value
+    location_option = page.locator.return_value.filter.return_value.first
+
+    HotelSearchPage(page)._select_location(
+        "hyderabad", "HYD, Hyderabad, India"
+    )
+
+    textbox.fill.assert_called_once_with("hyderabad")
+    location_option.wait_for.assert_called_once_with(
+        state="visible", timeout=30_000
+    )
+    location_option.click.assert_called_once_with(timeout=10_000)
+    page.wait_for_timeout.assert_not_called()
 
 
 def testHotelBookNowWaitsUntilButtonBecomesVisible(
