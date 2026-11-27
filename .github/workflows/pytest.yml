@@ -100,19 +100,19 @@ jobs:
           --log-file=testResults/pytest.log
           --log-file-level=DEBUG
           --junitxml=testResults/preflight-results.xml
-          testCases/unitTests/testCalendarHelper.py
-          testCases/unitTests/testSupport.py
-          testCases/unitTests/testCiReport.py
-          testCases/unitTests/testSessionState.py
-          testCases/unitTests/testBrowserDiagnostics.py
-          testCases/unitTests/testSkipCases.py
-          testCases/unitTests/testImpactAnalysis.py
-          testCases/unitTests/testLogging.py
-          testCases/unitTests/testReportHooks.py
-          testCases/unitTests/testHotelPage.py
-          testCases/unitTests/testFlightTripSummaryPage.py
-          testCases/unitTests/testTripPage.py
-          testCases/unitTests/testAllureReportViewer.py
+          testCases/componentTests/testCalendarHelper.py
+          testCases/componentTests/testSupport.py
+          testCases/componentTests/testCiReport.py
+          testCases/componentTests/testSessionState.py
+          testCases/componentTests/testBrowserDiagnostics.py
+          testCases/componentTests/testSkipCases.py
+          testCases/componentTests/testImpactAnalysis.py
+          testCases/componentTests/testLogging.py
+          testCases/componentTests/testReportHooks.py
+          testCases/componentTests/testHotelPage.py
+          testCases/componentTests/testFlightTripSummaryPage.py
+          testCases/componentTests/testTripPage.py
+          testCases/componentTests/testAllureReportViewer.py
       - name: Upload pytest report and browser artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
