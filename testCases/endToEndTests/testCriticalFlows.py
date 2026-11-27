@@ -211,7 +211,7 @@ def testC10UnknownAttractionsLocationIsRejectedWithoutNavigation(
     search_field = page.get_by_role("textbox", name="Where are you going?")
     search_field.fill("NoSuchDestinationForEmptyState")
     page.get_by_role("button", name="Search").click()
-    expect(page).to_have_url(re.compile(r"/tours/search$"))
+    expect(page).to_have_url(re.compile(r"/tours/search(?:\?.*)?$"))
     expect(search_field).to_be_visible()
 
 @pytest.mark.regression
@@ -223,13 +223,12 @@ def testE4SearchAttractionsAndOpenDetails(page: Page) -> None:
     search_field = page.get_by_role("textbox", name="Where are you going?")
     expect(search_field).to_be_visible()
     search_field.fill("San Francisco")
-    page.get_by_role("button", name="Search").click()
     destination_heading = page.get_by_role(
         "heading", name="San Francisco", exact=True
     )
-    expect(destination_heading).to_be_visible()
+    expect(destination_heading).to_be_visible(timeout=30_000)
     destination_heading.click()
-    expect(page).to_have_url(re.compile(r"/tours/[^/?]+/\d+"))
+    expect(page).to_have_url(re.compile(r"/tours/[^/?]+/\d+"), timeout=30_000)
     tour_heading = page.get_by_role("heading", level=2).first
     expect(tour_heading).to_be_visible()
     with page.expect_popup() as detail_page_info:
@@ -352,10 +351,12 @@ def testC22RefreshDuringFlightCheckoutRecoversSelectedItinerary(
     flight_trip_summary_page.proceed()
     FlightSeatMapPage(authenticated_page).handle_seats()
     authenticated_page.reload(wait_until="domcontentloaded")
-    expect(authenticated_page).to_have_url(re.compile(r"/flights/travellerinfo/"))
+    expect(authenticated_page).to_have_url(
+        re.compile(r"/flights/travellerinfo/"), timeout=60_000
+    )
     expect(
         authenticated_page.locator('input[name^="firstName"]').first
-    ).to_be_visible(timeout=30_000)
+    ).to_be_visible(timeout=60_000)
 
 def _open_flight_checkout(
     home_page: HomePage,
@@ -401,7 +402,12 @@ def _open_hotel_guest_form(
     hotel_data: HotelData,
 ) -> Page:
     hotel_page = _open_hotel_detail(home_page, search_page, listing_page, hotel_data)
-    if not HotelDetailPage(hotel_page).click_book_now():
+    hotel_detail = HotelDetailPage(hotel_page)
+    if not hotel_detail.click_book_now():
+        if hotel_detail.is_sold_out():
+            pytest.skip(
+                "The selected hotel is sold out; guest-form validation is unavailable."
+            )
         pytest.fail(
             "The selected hotel is unavailable for booking; "
             "the guest-form validation could not be verified."

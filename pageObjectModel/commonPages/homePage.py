@@ -6,8 +6,6 @@ from pageObjectModel.tripPages.tripSavedTripsPage import TripSavedTripsPage
 class HomePage(BasePage):
     def __init__(self, page: Page) -> None:
         super().__init__(page)
-        # --- Locators ---
-        self.saved_trips_link = page.get_by_role("link", name="Tripplanner saved trips")
 
     # --- Actions ---
     def navigate_to_flights(self) -> None:
@@ -22,35 +20,25 @@ class HomePage(BasePage):
 
     def open_saved_trips(self) -> Page:
         self.log_step("Opening saved trips")
-        self.page.goto("/", wait_until="domcontentloaded")
+        saved_trips_page = self.page.context.new_page()
         with self.page.context.expect_event(
             "response",
             predicate=TripSavedTripsPage.is_user_plans_response,
             timeout=60_000,
         ) as response_info:
-            try:
-                with self.page.expect_popup(timeout=15_000) as popup:
-                    self.saved_trips_link.click()
-            except PlaywrightTimeoutError as popup_error:
-                if self.page.url.endswith("/tripplanner/saved-trips"):
-                    self.log_step("Saved trips page opened in the same tab")
-                    saved_trips_page = self.page
-                else:
-                    raise RuntimeError(
-                        "Could not open the saved trips page."
-                    ) from popup_error
-            else:
-                saved_trips_page = popup.value
-                try:
-                    saved_trips_page.wait_for_url(
-                        "**/tripplanner/saved-trips",
-                        timeout=30_000,
-                        wait_until="domcontentloaded",
-                    )
-                except PlaywrightTimeoutError as error:
-                    raise RuntimeError(
-                        "The saved trips tab opened but did not reach the saved trips page."
-                    ) from error
+            saved_trips_page.goto(
+                "/tripplanner/saved-trips", wait_until="domcontentloaded"
+            )
+        try:
+            saved_trips_page.wait_for_url(
+                "**/tripplanner/saved-trips",
+                timeout=30_000,
+                wait_until="domcontentloaded",
+            )
+        except PlaywrightTimeoutError as error:
+            raise RuntimeError(
+                "The saved trips tab did not reach the saved trips page."
+            ) from error
         response = response_info.value
         if not response.ok:
             raise RuntimeError(

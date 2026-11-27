@@ -13,9 +13,8 @@ class TripSavedTripsPage(BasePage):
         super().__init__(page)
         # --- Locators ---
         self.delete_buttons = page.get_by_role("button", name="Delete")
-        self.first_delete_button = page.get_by_role("button", name="Delete").first
+        self.first_delete_button = self.delete_buttons.first
         self.create_trip_button = page.locator("button").filter(has_text="Create Trip").first
-        self.build_now_link = page.get_by_role("link", name="Build Now")
 
     # --- Actions ---
     def _wait_for_saved_trips(self) -> None:
@@ -102,11 +101,44 @@ class TripSavedTripsPage(BasePage):
                 urljoin(self.page.url, "/ai-trip-planner"),
                 wait_until="domcontentloaded",
             )
-            self.build_now_link.wait_for(state="visible", timeout=45_000)
-            self.build_now_link.click()
-            planner_page.wait_for_url(
-                "**/tripplanner/personal-trip/search", timeout=30_000
-            )
+            try:
+                planner_page.wait_for_url(
+                    "**/tripplanner/personal-trip/search", timeout=15_000
+                )
+            except PlaywrightTimeoutError:
+                build_now_button = planner_page.get_by_role(
+                    "button", name="Build Now", exact=False
+                ).first
+                build_now_link = planner_page.get_by_role(
+                    "link", name="Build Now", exact=False
+                ).first
+                build_now_text = planner_page.get_by_text(
+                    "Build Now", exact=True
+                ).first
+                for build_now_control in (
+                    build_now_button,
+                    build_now_link,
+                    build_now_text,
+                ):
+                    try:
+                        build_now_control.wait_for(state="visible", timeout=10_000)
+                    except PlaywrightTimeoutError:
+                        continue
+                    build_now_control.click()
+                    break
+                else:
+                    planner_page.goto(
+                        urljoin(self.page.url, "/tripplanner/personal-trip/search"),
+                        wait_until="domcontentloaded",
+                    )
+                try:
+                    planner_page.wait_for_url(
+                        "**/tripplanner/personal-trip/search", timeout=30_000
+                    )
+                except PlaywrightTimeoutError as error:
+                    raise RuntimeError(
+                        "The trip planner did not open the personal-trip search page."
+                    ) from error
             self.save_current_state("trip-planner-created-state.json")
             return planner_page
         try:

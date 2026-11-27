@@ -10,7 +10,7 @@ class HotelDetailPage(BasePage):
         self.book_now_button = page.locator("button").filter(has_text="Book Now").first
         self.sold_out_message = page.get_by_text(
             re.compile(r"We are sold out!|Sorry we are sold out!", re.IGNORECASE)
-        )
+        ).first
         self.search_other_hotels_button = page.get_by_role(
             "button", name="Search other Hotels"
         ).first

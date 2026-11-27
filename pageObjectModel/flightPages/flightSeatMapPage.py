@@ -25,6 +25,9 @@ class FlightSeatMapPage(BasePage):
         self.skip_to_checkout_button = page.get_by_role(
             "button", name="Skip/Move to Checkout..."
         )
+        self.skip_to_checkout_text = page.get_by_text(
+            re.compile(r"Skip.*(?:to|Move).*Checkout", re.IGNORECASE)
+        ).first
 
     # --- Actions ---
     def handle_seats(self) -> bool:
@@ -97,7 +100,17 @@ class FlightSeatMapPage(BasePage):
                     repricing_errors.append(message)
             self.page.on("pageerror", capture_repricing_error)
             try:
-                self.skip_to_checkout_button.click(force=True)
+                try:
+                    self.skip_to_checkout_button.wait_for(
+                        state="visible", timeout=10_000
+                    )
+                    skip_control = self.skip_to_checkout_button
+                except PlaywrightTimeoutError:
+                    self.skip_to_checkout_text.wait_for(
+                        state="visible", timeout=10_000
+                    )
+                    skip_control = self.skip_to_checkout_text
+                skip_control.click(force=True)
                 self.page.wait_for_url("**/flights/travellerinfo/**", timeout=60_000)
                 self.first_name_input.wait_for(state="visible", timeout=60_000)
             except PlaywrightTimeoutError as error:

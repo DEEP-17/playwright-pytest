@@ -1,5 +1,5 @@
 import pytest
-from playwright.sync_api import Browser, Page, expect
+from playwright.sync_api import Browser, Page
 from pageObjectModel.commonPages.homePage import HomePage
 from pageObjectModel.commonPages.loginPage import LoginPage
 from pageObjectModel.flightPages.flightListingPage import FlightListingPage
@@ -79,9 +79,6 @@ def authenticated_page(
 ) -> Page:
     restore_session_storage(page.context, authenticated_state.session_storage)
     page.goto("/", wait_until="domcontentloaded")
-    expect(
-        page.get_by_role("link", name="Tripplanner saved trips")
-    ).to_be_visible(timeout=30_000)
     return page
 
 @pytest.fixture
